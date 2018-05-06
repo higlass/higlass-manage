@@ -23,6 +23,61 @@ def hg_name_to_container_name(hg_name):
 def cli():
     pass
 
+def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header):
+    if filetype == 'bedfile':
+        if assembly is None and chromsizes_filename is None:
+            print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
+            return
+
+        with tempfile.TemporaryDirectory() as td:
+            output_file = op.join(td, filename + '.beddb')
+
+            print("Aggregating bedfile")
+            cca._bedfile(filename,
+                    output_file,
+                    assembly,
+                    importance_column='random',
+                    has_header=has_header,
+                    chromosome=None,
+                    max_per_tile=50,
+                    delimiter=None,
+                    chromsizes_filename=chromsizes_filename,
+                    offset=0,
+                    tile_size=1024)
+
+            to_import = output_file
+
+            # because we aggregated the file, the new filetype is beddb
+            filetype='beddb'
+            return (to_import, filetype)
+    elif filetype == 'bedpe':
+        if assembly is None and chromsizes_filename is None:
+            print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
+            return
+
+        with tempfile.TemporaryDirectory() as td:
+            output_file = op.join(td, filename + '.beddb')
+
+            print("Aggregating bedfile")
+            cca._bedpe(filename,
+                    output_file,
+                    assembly,
+                    importance_column='random',
+                    has_header=has_header,
+                    chromosome=None,
+                    max_per_tile=50,
+                    chromsizes_filename=chromsizes_filename,
+                    tile_size=1024)
+
+            to_import = output_file
+
+            # because we aggregated the file, the new filetype is beddb
+            filetype='bed2ddb'
+            return (to_import, filetype)
+    else:
+        return (filename, filetype)
+
+
 def import_file(hg_name, filepath, filetype, datatype, assembly):
     # get this container's temporary directory
     temp_dir = get_temp_dir(hg_name)
@@ -225,7 +280,8 @@ def stop(names):
 @click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename):
+@click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
+def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename, has_header):
     if not op.exists(filename):
         print('File not found:', filename, file=sys.stderr)
         return
@@ -255,29 +311,8 @@ def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename)
                 print("Based on the filetype, you may want to try the datatype: {}".format(recommended_datatype))
 
 
-    if filetype == 'bedfile':
-        if assembly is None and chromsizes_filename is None:
-            print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
-            return
 
-        with tempfile.TemporaryDirectory() as td:
-            output_file = op.join(td, filename + '.beddb')
-
-            print("Aggregating bedfile")
-            cca._bedfile(filename,
-                    output_file,
-                    assembly,
-                    importance_column='random',
-                    has_header=False,
-                    chromosome=None,
-                    max_per_tile=50,
-                    delimiter=None,
-                    chromsizes_filename=chromsizes_filename,
-                    offset=0,
-                    tile_size=1024)
-
-            to_import = output_file
-
+    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
     import_file(hg_name, to_import, filetype, datatype, assembly)
 
 def main():
