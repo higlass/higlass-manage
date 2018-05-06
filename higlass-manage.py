@@ -2,14 +2,123 @@
 
 import argparse
 import click
+import clodius.cli.aggregate as cca
+import clodius.chromosomes as cch
+import docker
+import hgtiles.cooler as hgco
+import hgtiles.bigwig as hgbi
+import os
 import os.path as op
 import subprocess as sp
 import sys
+import tempfile
 import webbrowser
+
+CONTAINER_PREFIX = 'higlass-manage-container'
+
+def hg_name_to_container_name(hg_name):
+    return '{}-{}'.format(CONTAINER_PREFIX, hg_name)
 
 @click.group()
 def cli():
     pass
+
+def import_file(hg_name, filepath, filetype, datatype, assembly):
+    # get this container's temporary directory
+    temp_dir = get_temp_dir(hg_name)
+    if not op.exists(temp_dir):
+        os.makedirs(temp_dir)
+        
+    filename = op.split(filepath)[1]
+    to_import_path = op.join(temp_dir, filename)
+
+    if to_import_path != filepath:
+        # if this file already exists in the temporary dir
+        # remove it
+        if op.exists(to_import_path):
+            print("Removing existing file in temporary dir:", to_import_path)
+            os.remove(to_import_path)
+
+        os.link(filepath, to_import_path)
+
+    coordSystem = '--coordSystem {}'.format(assembly) if assembly is not None else ''
+
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    container = client.containers.get(container_name)
+
+    (exit_code, output) = container.exec_run( 'python higlass-server/manage.py ingest_tileset --filename' +
+            ' /tmp/{}'.format(filename) +
+            ' --filetype {} --datatype {} {}'.format(
+                filetype, datatype, coordSystem))
+    print('exit_code:', exit_code)
+    print('output:', output)
+
+    pass
+
+def get_temp_dir(hg_name):
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    config = client.api.inspect_container(container_name)
+
+    for mount in config['Mounts']:
+        if mount['Destination'] == '/tmp':
+            return mount['Source']
+
+def infer_filetype(filename):
+    try:
+        info = hgco.tileset_info(filename)
+        return 'cooler'
+    except:
+        # not a cooler
+        pass
+
+    try:
+        info = hgbi.tileset_info(filename)
+        return 'bigwig'
+    except:
+        pass
+
+def infer_datatype(filetype):
+    if filetype == 'cooler':
+        return 'matrix'
+    if filetype == 'bigwig':
+        return 'vector'
+
+def recommend_filetype(filename):
+    ext = op.splitext(filename)
+    if op.splitext(filename)[1] == '.bed':
+        return 'bedfile'
+    if op.splitext(filename)[1] == '.bedpe':
+        return 'bedpe'
+
+def recommend_datatype(filetype):
+    if filetype == 'bedfile':
+        return 'bedlike'
+
+def get_hm_config():
+    '''
+    Return the config file for the currently set up instances.
+    '''
+    hm_config_filename = op.expanduser('~/.higlass-manage')
+
+    try:
+        with open(hm_config_filename, 'r') as f:
+            hm_config_json = json.load(f)
+    except FileNotFoundError as fnfe:
+        print("No existing config file found, returning an empty config", file = sys.stderr)
+        # config file not found, return an empty config
+        return {}
+
+def update_hm_config(hm_config):
+    '''
+    Update the hm_config on disk
+    '''
+    try:
+        with open(hm_config_filename, 'w') as f:
+            json.write(f, hm_config)
+    except Exception as ex:
+        print("Error updating the hm_config: {}".format(ex))
 
 @cli.command()
 @click.option('-t', '--temp-dir',
@@ -21,35 +130,60 @@ def cli():
         help='The higlass data directory to use',
         type=str)
 @click.option('-v', '--version',
-        default=None,
+        default='latest',
         help='The version of the Docker container to use',
         type=str)
 @click.option('-p', '--port',
         default=8989,
         help='The port that the HiGlass instance should run on',
         type=str)
-def start(temp_dir, data_dir, version, port):
+@click.option('-n', '--name',
+        default='default',
+        help='The name for this higlass instance',
+        type=str)
+def start(temp_dir, data_dir, version, port, name):
+    container_name = '{}-{}'.format(CONTAINER_PREFIX,name)
+
+    client = docker.from_env()
+
+    try:
+        container = client.containers.get(container_name)
+
+        print('Stopping previously running container')
+        container.stop()
+        container.remove()
+    except docker.errors.NotFound:
+        # container isn't running so no need to stop it
+        pass
+
+    print('pulling version:', version)
+    image = client.images.pull('gehlenborglab/higlass', version)
+
+    data_dir = op.expanduser(data_dir)
+    temp_dir = op.expanduser(temp_dir)
+
+    print('Data directory:', data_dir)
+    print('Temp directory:', temp_dir)
+
     version_addition = '' if version is None else ':{}'.format(version)
 
-    # try to stop and remove currently running images
-    ret = sp.call(['docker', 'stop', 
-        'higlass-container'.format(version_addition)])
-    ret = sp.call(['docker', 'rm', 
-        'higlass-container'.format(version_addition)])
+    print('Starting...', name, port)
+    client.containers.run(image,
+            ports={80 : port},
+            volumes={
+                temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
+                data_dir : { 'bind' : '/data', 'mode' : 'rw' }
+                },
+            name=container_name,
+            detach=True)
+    print('Docker started: {}'.format(container_name))
 
-    ret = sp.call(['docker', 'pull', 
-        'gehlenborglab/higlass{}'.format(version_addition)])
-
-    if ret != 0:
-        print("Error pulling latest Docker image", file=sys.stderr)
-        return
-
-    print('ret:', ret)
+    return
 
     sp.call(['docker', 'run', '--detach',
         '--publish', str(port) + ':80',
-        '--volume', op.expanduser(temp_dir) + ':/tmp',
-        '--volume', op.expanduser(data_dir) + ':/data',
+        '--volume', temp_dir + ':/tmp',
+        '--volume', data_dir + ':/data',
         '--name', 'higlass-container',
         'gehlenborglab/higlass'])
     
@@ -57,9 +191,94 @@ def start(temp_dir, data_dir, version, port):
     pass
 
 @cli.command()
-@click.option(argument)
-def ingest(filename):
-    pass
+def list():
+    client = docker.from_env()
+
+    for container in client.containers.list():
+        name = container.name
+        if name.find(CONTAINER_PREFIX) == 0:
+            hm_name = name[len(CONTAINER_PREFIX)+1:]
+            config = client.api.inspect_container(container.name)
+            directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in  config['Mounts']])
+            port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
+            print(hm_name, "{} {}".format(directories, port))
+
+@cli.command()
+@click.argument('names', nargs=-1)
+def stop(names):
+    client = docker.from_env()
+
+    if len(names) == 0:
+        names = ('default',)
+
+    for name in names:
+        hm_name = '{}-{}'.format(CONTAINER_PREFIX, name)
+
+        client.containers.get(hm_name).stop()
+        client.containers.get(hm_name).remove()
+
+@cli.command()
+@click.argument('filename')
+@click.option('--hg-name', default='default', 
+        help='The name of the higlass container to import this file to')
+@click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
+@click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
+@click.option('--assembly', default=None, help="The assembly that this data is mapped to")
+@click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
+def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename):
+    if not op.exists(filename):
+        print('File not found:', filename, file=sys.stderr)
+        return
+
+    if filetype is None:
+        # no filetype provided, try a few common filetypes
+        filetype = infer_filetype(filename)
+        print('Inferred filetype:', filetype)
+
+        if filetype is None:
+            recommended_filetype = recommend_filetype(filename)
+
+            print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
+            if recommended_filetype is not None:
+                print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
+            
+            return
+
+    if datatype is None:
+        datatype = infer_datatype(filetype)
+        print('Inferred datatype:', datatype)
+
+        if datatype is None:
+            recommended_datatype = recommend_datatype(filetype)
+            print('Unknown datatype, please specify using the --datatype option', file=sys.stderr)
+            if recommended_datatype is not None:
+                print("Based on the filetype, you may want to try the datatype: {}".format(recommended_datatype))
+
+
+    if filetype == 'bedfile':
+        if assembly is None and chromsizes_filename is None:
+            print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
+            return
+
+        with tempfile.TemporaryDirectory() as td:
+            output_file = op.join(td, filename + '.beddb')
+
+            print("Aggregating bedfile")
+            cca._bedfile(filename,
+                    output_file,
+                    assembly,
+                    importance_column='random',
+                    has_header=False,
+                    chromosome=None,
+                    max_per_tile=50,
+                    delimiter=None,
+                    chromsizes_filename=chromsizes_filename,
+                    offset=0,
+                    tile_size=1024)
+
+            to_import = output_file
+
+    import_file(hg_name, to_import, filetype, datatype, assembly)
 
 def main():
     parser = argparse.ArgumentParser(description="""
