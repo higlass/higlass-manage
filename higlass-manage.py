@@ -120,6 +120,15 @@ def get_temp_dir(hg_name):
         if mount['Destination'] == '/tmp':
             return mount['Source']
 
+def get_data_dir(hg_name):
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    config = client.api.inspect_container(container_name)
+
+    for mount in config['Mounts']:
+        if mount['Destination'] == '/data':
+            return mount['Source']
+
 def infer_filetype(filename):
     try:
         info = hgco.tileset_info(filename)
@@ -314,6 +323,24 @@ def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename,
 
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
     import_file(hg_name, to_import, filetype, datatype, assembly)
+
+@cli.command()
+@click.argument('hg_name', nargs=-1)
+def log(hg_name):
+    '''
+    Return the error log for this container.
+    '''
+    if len(hg_name) == 0:
+        hg_name = 'default'
+    else:
+        hg_name = hg_name[0]
+
+    data_dir = get_data_dir(hg_name)
+    log_location = op.join(data_dir, 'log', 'hgs.log')
+
+    with open(log_location, 'r') as f:
+        for line in f:
+            print(line, end='')
 
 def main():
     parser = argparse.ArgumentParser(description="""
