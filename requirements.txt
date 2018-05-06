@@ -1,1 +1,3 @@
-hgtiles
+-e git+https://github.com/pkerpedjiev/hgtiles.git@master#egg=hgtiles
+-e git+https://github.com/hms-dbmi/clodius.git@develop#egg=clodius
+docker
