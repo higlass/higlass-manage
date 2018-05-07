@@ -206,6 +206,9 @@ def update_hm_config(hm_config):
         help='The name for this higlass instance',
         type=str)
 def start(temp_dir, data_dir, version, port, name):
+    '''
+    Start a HiGlass instance
+    '''
     container_name = '{}-{}'.format(CONTAINER_PREFIX,name)
 
     client = docker.from_env()
@@ -244,18 +247,14 @@ def start(temp_dir, data_dir, version, port, name):
 
     return
 
-    sp.call(['docker', 'run', '--detach',
-        '--publish', str(port) + ':80',
-        '--volume', temp_dir + ':/tmp',
-        '--volume', data_dir + ':/data',
-        '--name', 'higlass-container',
-        'gehlenborglab/higlass'])
-    
     webbrowser.open('http://localhost:{port}/'.format(port=port))
     pass
 
 @cli.command()
 def list():
+    '''
+    List the HiGlass instances running on this computer
+    '''
     client = docker.from_env()
 
     for container in client.containers.list():
@@ -270,6 +269,9 @@ def list():
 @cli.command()
 @click.argument('names', nargs=-1)
 def stop(names):
+    '''
+    Stop a HiGlass instance
+    '''
     client = docker.from_env()
 
     if len(names) == 0:
@@ -291,6 +293,9 @@ def stop(names):
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
 def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename, has_header):
+    '''
+    Ingest a dataset into a local HiGlass instance
+    '''
     if not op.exists(filename):
         print('File not found:', filename, file=sys.stderr)
         return
