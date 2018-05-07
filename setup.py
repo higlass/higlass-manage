@@ -11,7 +11,8 @@ setup(
     install_requires=[
         'Click',
         'clodius==0.9.0',
-        'cooler=v0.7.9',
+        'cooler==0.7.9',
+        'pandas>=0.19',
         'docker'
     ],
     entry_points='''
