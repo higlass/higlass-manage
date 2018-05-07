@@ -5,8 +5,6 @@ import click
 import clodius.cli.aggregate as cca
 import clodius.chromosomes as cch
 import docker
-import hgtiles.cooler as hgco
-import hgtiles.bigwig as hgbi
 import os
 import os.path as op
 import subprocess as sp
@@ -139,18 +137,14 @@ def get_port(hg_name):
     return port
 
 def infer_filetype(filename):
-    try:
-        info = hgco.tileset_info(filename)
-        return 'cooler'
-    except:
-        # not a cooler
-        pass
+    _,ext = op.splitext(filename)
 
-    try:
-        info = hgbi.tileset_info(filename)
+    if ext.lower() == '.bw' or ext.lower() == '.bigwig':
         return 'bigwig'
-    except:
-        pass
+    elif ext.lower() == '.mcool' or ext.lower() == '.cool':
+        return 'cooler'
+
+    return None
 
 def infer_datatype(filetype):
     if filetype == 'cooler':

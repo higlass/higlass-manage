@@ -10,8 +10,8 @@ setup(
     py_modules=['higlass_manage'],
     install_requires=[
         'Click',
-        'hgtiles==v0.2.1',
-        'clodius==v0.9.0',
+        'clodius==0.9.0',
+        'cooler=v0.7.9',
         'docker'
     ],
     entry_points='''
