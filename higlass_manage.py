@@ -236,6 +236,11 @@ def start(temp_dir, data_dir, version, port, name, site_url):
     data_dir = op.expanduser(data_dir)
     temp_dir = op.expanduser(temp_dir)
 
+    if not op.exists(temp_dir):
+        os.makedirs(temp_dir)
+    if not op.exists(data_dir):
+        os.makedirs(data_dir)
+
     environment = {}
 
     if site_url is not None:
