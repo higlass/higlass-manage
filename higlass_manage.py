@@ -214,7 +214,14 @@ def update_hm_config(hm_config):
         default='default',
         help='The name for this higlass instance',
         type=str)
-def start(temp_dir, data_dir, version, port, name):
+@click.option('-s', '--site-url',
+        default=None,
+        help='When creating an external-facing instance, enter its IP or hostname using this parameter',
+        type=str)
+def start(temp_dir, data_dir, version, port, name, site_url):
+    '''
+    Start a HiGlass instance
+    '''
     container_name = '{}-{}'.format(CONTAINER_PREFIX,name)
 
     client = docker.from_env()
@@ -235,6 +242,11 @@ def start(temp_dir, data_dir, version, port, name):
     data_dir = op.expanduser(data_dir)
     temp_dir = op.expanduser(temp_dir)
 
+    environment = {}
+
+    if site_url is not None:
+        environment['SITE_URL'] = site_url
+
     print('Data directory:', data_dir)
     print('Temp directory:', temp_dir)
 
@@ -248,6 +260,7 @@ def start(temp_dir, data_dir, version, port, name):
                 data_dir : { 'bind' : '/data', 'mode' : 'rw' }
                 },
             name=container_name,
+            environment=environment,
             detach=True)
     print('Docker started: {}'.format(container_name))
 
@@ -265,6 +278,9 @@ def start(temp_dir, data_dir, version, port, name):
 
 @cli.command()
 def list():
+    '''
+    List running instances
+    '''
     client = docker.from_env()
 
     for container in client.containers.list():
@@ -280,7 +296,7 @@ def list():
 @click.argument('names', nargs=-1)
 def browser(names):
     '''
-    Launch a web browser for this instance
+    Launch a web browser for a running instance
     '''
     client = docker.from_env()
 
@@ -298,6 +314,9 @@ def browser(names):
 @cli.command()
 @click.argument('names', nargs=-1)
 def stop(names):
+    '''
+    Stop a running instance
+    '''
     client = docker.from_env()
 
     if len(names) == 0:
@@ -306,8 +325,11 @@ def stop(names):
     for name in names:
         hm_name = '{}-{}'.format(CONTAINER_PREFIX, name)
 
-        client.containers.get(hm_name).stop()
-        client.containers.get(hm_name).remove()
+        try:
+            client.containers.get(hm_name).stop()
+            client.containers.get(hm_name).remove()
+        except docker.errors.NotFound as ex:
+            print("Instance not running: {}".format(name))
 
 @cli.command()
 @click.argument('filename')
@@ -319,6 +341,9 @@ def stop(names):
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
 def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename, has_header):
+    '''
+    Ingest a dataset
+    '''
     if not op.exists(filename):
         print('File not found:', filename, file=sys.stderr)
         return
