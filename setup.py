@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='higlass-manage',
-    version='0.1.0',
+    version='0.1.1',
     py_modules=['higlass_manage'],
     install_requires=[
         'Click',
