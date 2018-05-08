@@ -36,6 +36,8 @@ If you want to make your instance accessible to the outside world, you need to s
 higlass-manage start --site-url higlass.io
 ```
 
+These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter.
+
 ### Ingesting data
 
 Use the `ingest` command to add new data. Generally data requires a ``filetype`` and a ``datatype``.
