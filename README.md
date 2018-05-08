@@ -24,7 +24,7 @@ HiGlass wraps the Docker commands for starting, stopping, listing and populating
 ### Starting a HiGlass instance
 
 Start a local higlass instance using the default data and temporary directories: `~/hg-data` and `/tmp/higlass-docker`. 
-All of the data ingested into the instance will be placed into the data directory.
+All of the data ingested into the instance will be placed into the data directory. Alternate data and temp directory can be specified using ``--data-dir`` and ``--temp-dir`` parameters.
 
 ```
 higlass-manage start
