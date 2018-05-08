@@ -27,7 +27,13 @@ Start a local higlass instance using the default data and temporary directories:
 All of the data ingested into the instance will be placed into the data directory.
 
 ```
-higlass-manage.py start
+higlass-manage start
+```
+
+If you want to make your instance accessible to the outside world, you need to specify the host URL that it will be available through using the `--site-url` parameter:
+
+```
+higlass-manage start --site-url higlass.io
 ```
 
 ### Ingesting data
@@ -36,14 +42,23 @@ Use the `ingest` command to add new data. Generally data requires a ``filetype``
 This can sometimes (i.e. in the case of `cooler` and `bigwig` files) be inferred from the file itself.
 
 ```
-higlass-manage.py ingest my_data.mcool
+higlass-manage ingest my_data.mcool
 ```
 
 In other, more ambiguous cases, it needs to be explicitly specified:
 
 ```
-higlass-manage.py ingest my_file.bed --filetype bedfile --datatype bedlike --assembly hg19
+higlass-manage ingest my_file.bed --filetype bedfile --datatype bedlike --assembly hg19
 ```
 
 Note that bedfiles don't store chromosome sizes so they need to be passed in using 
 either the `--assembly` or `--chromsizes-filename` parameters.
+
+### Stopping a HiGlass instance
+
+To stop a running instance, use the `stop` command:
+
+```
+higlass-manage stop
+```
+
