@@ -399,6 +399,22 @@ def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename,
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
     import_file(hg_name, to_import, filetype, datatype, assembly)
 
+
+@cli.command()
+@click.argument('hg_name', nargs=-1)
+def shell(hg_name):
+    if len(hg_name) == 0:
+        hg_name = 'default'
+    else:
+        hg_name = hg_name[0]
+
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    container = client.containers.get(container_name)
+
+    sp.run(['docker', 'exec', '-it', container_name, 'bash'])
+    
+
 @cli.command()
 @click.argument('hg_name', nargs=-1)
 def log(hg_name):
