@@ -5,8 +5,10 @@ import click
 import clodius.cli.aggregate as cca
 import clodius.chromosomes as cch
 import docker
+import json
 import os
 import os.path as op
+import requests
 import subprocess as sp
 import sys
 import tempfile
@@ -290,6 +292,27 @@ def list():
             directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in  config['Mounts']])
             port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
             print(hm_name, "{} {}".format(directories, port))
+
+@cli.command()
+@click.option('--hg-name', default='default', 
+        help='The name of the higlass container to import this file to')
+def list_data(hg_name):
+    '''
+    List running instances
+    '''
+    port = get_port(hg_name)
+
+    # use a really high limit to avoid paging
+    url = 'http://localhost:{}/api/v1/tilesets/?limit=10000'.format(port)
+    ret = requests.get(url)
+
+    if ret.status_code != 200:
+        print('Error retrieving tilesets:', ret)
+        return
+
+    j = json.loads(ret.content.decode('utf8'))
+    for result in j['results']:
+        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['name']]))
 
 @cli.command()
 @click.argument('names', nargs=-1)

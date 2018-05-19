@@ -13,7 +13,8 @@ setup(
         'clodius==0.9.0',
         'cooler==0.7.9',
         'pandas>=0.19',
-        'docker'
+        'docker',
+        'requests'
     ],
     entry_points='''
         [console_scripts]
