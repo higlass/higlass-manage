@@ -232,8 +232,10 @@ def start(temp_dir, data_dir, version, port, name, site_url):
         # container isn't running so no need to stop it
         pass
 
-    print('pulling version:', version)
-    image = client.images.pull('gehlenborglab/higlass', version)
+    if version == 'local':
+        image = client.images.get('image-default')
+    else:
+        image = client.images.pull('gehlenborglab/higlass', version)
 
     data_dir = op.expanduser(data_dir)
     temp_dir = op.expanduser(temp_dir)
@@ -298,7 +300,7 @@ def list():
         help='The name of the higlass container to import this file to')
 def list_data(hg_name):
     '''
-    List running instances
+    List the datasets in an instance
     '''
     port = get_port(hg_name)
 
@@ -403,6 +405,9 @@ def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename,
 @cli.command()
 @click.argument('hg_name', nargs=-1)
 def shell(hg_name):
+    '''
+    Start a shell in a higlass container
+    '''
     if len(hg_name) == 0:
         hg_name = 'default'
     else:
@@ -419,7 +424,7 @@ def shell(hg_name):
 @click.argument('hg_name', nargs=-1)
 def log(hg_name):
     '''
-    Return the error log for this container.
+    Return the error log for this container
     '''
     if len(hg_name) == 0:
         hg_name = 'default'
