@@ -64,6 +64,23 @@ VlWKy6ofT6qMFGf-uG_5pQ | beddb | bedlike | GSE93955_CHIP_DMC1_B6_peaks.bed.multi
 LAXFhHhASa2zDgJRRS67cw | cooler | matrix | H3K27me3_HiChIP_1.multi.cool
 ```
 
+### Starting a shell
+
+For debugging purposes it can be useful to run a shell within the Docker container hosting the 
+higlass instance. This can accomplished using the `shell` command:
+
+```
+higlass-manage shell
+```
+
+### Getting the error log
+
+When errors occur they are usually on the higlass-server end. To output the log use the `log` command:
+
+```
+higlass-manage log
+```
+
 ### Stopping a HiGlass instance
 
 To stop a running instance, use the `stop` command:
