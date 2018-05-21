@@ -284,7 +284,7 @@ def start(temp_dir, data_dir, version, port, name, site_url):
         '--name', 'higlass-container',
         'gehlenborglab/higlass'])
     
-    webbrowser.open('http://localhost:{port}/'.format(port=port))
+    webbrowser.open('http://localhost:{port}/app'.format(port=port))
     pass
 
 @cli.command()
