@@ -12,6 +12,7 @@ import requests
 import subprocess as sp
 import sys
 import tempfile
+import time
 import webbrowser
 
 CONTAINER_PREFIX = 'higlass-manage-container'
@@ -222,7 +223,10 @@ def update_hm_config(hm_config):
         default=None,
         help='When creating an external-facing instance, enter its IP or hostname using this parameter',
         type=str)
-def start(temp_dir, data_dir, version, port, name, site_url):
+@click.option('--public-data/--no-public-data',
+        default=True,
+        help='Include or exclude public data in the list of available tilesets')
+def start(temp_dir, data_dir, version, port, name, site_url, public_data):
     '''
     Start a HiGlass instance
     '''
@@ -264,7 +268,7 @@ def start(temp_dir, data_dir, version, port, name, site_url):
     version_addition = '' if version is None else ':{}'.format(version)
 
     print('Starting...', name, port)
-    client.containers.run(image,
+    container = client.containers.run(image,
             ports={80 : port},
             volumes={
                 temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
@@ -275,6 +279,34 @@ def start(temp_dir, data_dir, version, port, name, site_url):
             detach=True)
     print('Docker started: {}'.format(container_name))
 
+    if not public_data:
+        started = False
+        while not started:
+            try:
+                req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port))
+                if req.status_code != 200:
+                    print('Waiting to start...', req.status_code)
+                    time.sleep(0.5)
+                else:
+                    config = json.loads(req.content.decode('utf-8'))
+                    config['trackSourceServers'] = ['/api/v1']
+                    started = True
+                    # print('config', json.dumps(config, indent=2))
+                    config = {
+                            'uid': 'default_local',
+                            'viewconf': config
+                            }
+
+                    ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
+                    # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
+                    ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
+                    ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
+                    ret = container.exec_run('cp higlass-website/app/index.html higlass-website/index.html')
+
+                    # requests.post('http://localhost:{}/api/v1/viewconfs/, 
+            except requests.exceptions.ConnectionError:
+                print("Waiting to start...")
+            time.sleep(0.5)
     return
 
     sp.call(['docker', 'run', '--detach',
