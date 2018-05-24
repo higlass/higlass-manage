@@ -78,7 +78,7 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
         return (filename, filetype)
 
 
-def import_file(hg_name, filepath, filetype, datatype, assembly):
+def import_file(hg_name, filepath, filetype, datatype, assembly, name):
     # get this container's temporary directory
     temp_dir = get_temp_dir(hg_name)
     if not op.exists(temp_dir):
@@ -97,6 +97,9 @@ def import_file(hg_name, filepath, filetype, datatype, assembly):
         os.link(filepath, to_import_path)
 
     coordSystem = '--coordSystem {}'.format(assembly) if assembly is not None else ''
+    name_text = '--name "{}"'.format(name) if name is not None else ''
+
+    print('name_text: {}'.format(name_text))
 
     client = docker.from_env()
     container_name = hg_name_to_container_name(hg_name)
@@ -104,8 +107,8 @@ def import_file(hg_name, filepath, filetype, datatype, assembly):
 
     (exit_code, output) = container.exec_run( 'python higlass-server/manage.py ingest_tileset --filename' +
             ' /tmp/{}'.format(filename) +
-            ' --filetype {} --datatype {} {}'.format(
-                filetype, datatype, coordSystem))
+            ' --filetype {} --datatype {} {} {}'.format(
+                filetype, datatype, name_text, coordSystem))
     print('exit_code:', exit_code)
     print('output:', output)
 
@@ -370,9 +373,10 @@ def stop(names):
 @click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
 @click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
+@click.option('--name', default=None, help="The name to use for this file")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
-def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename, has_header):
+def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header):
     '''
     Ingest a dataset
     '''
@@ -407,7 +411,7 @@ def ingest(filename, hg_name, filetype, datatype, assembly, chromsizes_filename,
 
 
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
-    import_file(hg_name, to_import, filetype, datatype, assembly)
+    import_file(hg_name, to_import, filetype, datatype, assembly, name)
 
 
 @cli.command()
