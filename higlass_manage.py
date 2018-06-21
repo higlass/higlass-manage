@@ -79,7 +79,7 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
         return (filename, filetype)
 
 
-def import_file(hg_name, filepath, filetype, datatype, assembly, name):
+def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid):
     # get this container's temporary directory
     temp_dir = get_temp_dir(hg_name)
     if not op.exists(temp_dir):
@@ -106,12 +106,21 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name):
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
-    (exit_code, output) = container.exec_run( 'python higlass-server/manage.py ingest_tileset --filename' +
+    command =  ('python higlass-server/manage.py ingest_tileset --filename' +
             ' /tmp/{}'.format(filename) +
             ' --filetype {} --datatype {} {} {}'.format(
                 filetype, datatype, name_text, coordSystem))
-    print('exit_code:', exit_code)
-    print('output:', output)
+
+    if uid is not None:
+        command += ' --uid {}'.format(uid)
+
+    print('command:', command)
+
+    (exit_code, output) = container.exec_run(command)
+
+
+    if exit_code != 0:
+        print("ERROR:", output.decode('utf8'), file=sys.stderr)
 
     pass
 
@@ -250,7 +259,11 @@ def start(temp_dir, data_dir, version, port, name, site_url, public_data):
     if version == 'local':
         image = client.images.get('image-default')
     else:
+        sys.stdout.write("Pulling latest image... ")
+        sys.stdout.flush()
         image = client.images.pull('gehlenborglab/higlass', version)
+        sys.stdout.write("done")
+        sys.stdout.flush()
 
     data_dir = op.expanduser(data_dir)
     temp_dir = op.expanduser(temp_dir)
@@ -406,9 +419,10 @@ def stop(names):
 @click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--name', default=None, help="The name to use for this file")
+@click.option('--uid', default=None, help='The uuid to use for this file')
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
-def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header):
+def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid):
     '''
     Ingest a dataset
     '''
@@ -443,7 +457,7 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
 
 
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
-    import_file(hg_name, to_import, filetype, datatype, assembly, name)
+    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid)
 
 
 @cli.command()
