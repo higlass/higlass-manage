@@ -15,6 +15,9 @@ import tempfile
 import time
 import webbrowser
 
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
+
 CONTAINER_PREFIX = 'higlass-manage-container'
 
 def hg_name_to_container_name(hg_name):
