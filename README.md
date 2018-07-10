@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1308949.svg)](https://doi.org/10.5281/zenodo.1308949)
+
 # Manage HiGlass Instances
 
 This utility script helps manage local HiGlass instances
