@@ -357,6 +357,21 @@ def list():
 @cli.command()
 @click.option('--hg-name', default='default', 
         help='The name of the higlass container to import this file to')
+def createsuperuser(hg_name):
+    '''
+    Create a superuser in the container
+
+    Parameters
+    ----------
+    hg_name: string
+        The name of the container to create a superuser on
+    '''
+    container_name = hg_name_to_container_name(hg_name)
+    sp.run(['docker', 'exec', '-it', container_name, 'python', 'higlass-server/manage.py', 'createsuperuser'])
+
+@cli.command()
+@click.option('--hg-name', default='default', 
+        help='The name of the higlass container to import this file to')
 def list_data(hg_name):
     '''
     List the datasets in an instance
