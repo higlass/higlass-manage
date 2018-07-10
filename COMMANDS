@@ -1,1 +1,3 @@
 python higlass-manage.py ingest ~/projects/higlass-server/data/bedfile.bed --filetype bedfile --datatype bedlike --assembly hg19
+
+python setup.py sdist upload -r pypi
