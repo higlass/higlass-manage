@@ -89,3 +89,6 @@ To stop a running instance, use the `stop` command:
 higlass-manage stop
 ```
 
+## License
+
+The code in this repository is provided under the MIT License.
