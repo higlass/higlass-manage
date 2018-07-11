@@ -370,6 +370,23 @@ def createsuperuser(hg_name):
     sp.run(['docker', 'exec', '-it', container_name, 'python', 'higlass-server/manage.py', 'createsuperuser'])
 
 @cli.command()
+@click.argument('username')
+@click.option('--hg-name', default='default', 
+        help='The name of the higlass container to import this file to')
+def deletesuperuser(username, hg_name):
+    '''
+    Delete a superuser in the container
+
+    Parameters
+    ----------
+    hg_name: string
+        The name of the container to create a superuser on
+    '''
+    container_name = hg_name_to_container_name(hg_name)
+    proc_input = 'from django.contrib.auth.models import User; User.objects.get(username="{}").delete()'.format(username)
+    sp.run(['docker', 'exec', '-i', container_name, 'python', 'higlass-server/manage.py', 'shell'], input=proc_input.encode('utf8'))
+
+@cli.command()
 @click.option('--hg-name', default='default', 
         help='The name of the higlass container to import this file to')
 def list_data(hg_name):
