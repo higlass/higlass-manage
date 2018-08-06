@@ -6,7 +6,7 @@ setup(
     author_email='pkerpedjiev@gmail.com',
     url='https://github.com/pkerpedjiev/higlass-manage',
     description='Wrappers for running the HiGlass Docker container',
-    version='0.1.10',
+    version='0.1.11',
     py_modules=['higlass_manage'],
     install_requires=[
         'Click',
