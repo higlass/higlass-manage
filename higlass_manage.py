@@ -461,7 +461,8 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
     '''
     Ingest a dataset
     '''
-    if not op.exists(filename):
+
+    if not op.exists(filename) and not op.islink(filename):
         print('File not found:', filename, file=sys.stderr)
         return
 
