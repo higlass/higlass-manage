@@ -27,8 +27,11 @@ def hg_name_to_container_name(hg_name):
 def cli():
     pass
 
-def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header):
+def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, link_file):
     if filetype == 'bedfile':
+        if link_file:
+            raise Exception("Bedfile files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
+            
         if assembly is None and chromsizes_filename is None:
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
             return
@@ -55,6 +58,8 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
             filetype='beddb'
             return (to_import, filetype)
     elif filetype == 'bedpe':
+        if link_file:
+            raise Exception("Bedpe files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
         if assembly is None and chromsizes_filename is None:
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
             return
@@ -82,23 +87,62 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
         return (filename, filetype)
 
 
-def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid):
+def import_linked_file(hg_name, filepath, filetype, datatype, assembly, name, uid):
+    '''
+    Ingest a file by linking it rather than copying it to the target 
+    directory.
+
+    Parameters
+    ----------
+    hg_name: string
+        The name of the Docker container
+    filepath: string
+        The location of the file 
+    filetype: string
+        The type of file to import (e.g. bigwig)
+    datatype: string
+        The type of the data in the file (e.g. vector)
+    assembly: string
+        The assembly that this data came from
+    name: string
+        The name of the dataset
+    uid: string
+        The unique identifier of the dataset
+    '''
+
+
+def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link_file):
     # get this container's temporary directory
-    temp_dir = get_temp_dir(hg_name)
-    if not op.exists(temp_dir):
-        os.makedirs(temp_dir)
-        
-    filename = op.split(filepath)[1]
-    to_import_path = op.join(temp_dir, filename)
+    if link_file:
+        data_dir = get_data_dir(hg_name)
 
-    if to_import_path != filepath:
-        # if this file already exists in the temporary dir
-        # remove it
-        if op.exists(to_import_path):
-            print("Removing existing file in temporary dir:", to_import_path)
-            os.remove(to_import_path)
+        linked_dir = op.join(data_dir, 'linked')
+        if not op.exists(linked_dir):
+            os.makedirs(linked_dir)
 
-        os.link(filepath, to_import_path)
+        filename = op.split(filepath)[1]
+        to_import_path = op.join(linked_dir, filename)
+
+        if op.islink(to_import_path):
+            print("file already exists")
+        else:
+            os.link(filepath, to_import_path)
+    else:
+        temp_dir = get_temp_dir(hg_name)
+        if not op.exists(temp_dir):
+            os.makedirs(temp_dir)
+            
+        filename = op.split(filepath)[1]
+        to_import_path = op.join(temp_dir, filename)
+
+        if to_import_path != filepath:
+            # if this file already exists in the temporary dir
+            # remove it
+            if op.exists(to_import_path):
+                print("Removing existing file in temporary dir:", to_import_path)
+                os.remove(to_import_path)
+
+            os.link(filepath, to_import_path)
 
     coordSystem = '--coordSystem {}'.format(assembly) if assembly is not None else ''
     name_text = '--name "{}"'.format(name) if name is not None else ''
@@ -109,10 +153,16 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid):
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
-    command =  ('python higlass-server/manage.py ingest_tileset --filename' +
-            ' /tmp/{}'.format(filename) +
-            ' --filetype {} --datatype {} {} {}'.format(
-                filetype, datatype, name_text, coordSystem))
+    if link_file:
+        command =  ('python higlass-server/manage.py ingest_tileset --filename' +
+                ' /data/media/linked/'.format(filename) +
+                ' --filetype {} --datatype {} {} {} --no-upload'.format(
+                    filetype, datatype, name_text, coordSystem))
+    else:
+        command =  ('python higlass-server/manage.py ingest_tileset --filename' +
+                ' /tmp/{}'.format(filename) +
+                ' --filetype {} --datatype {} {} {}'.format(
+                    filetype, datatype, name_text, coordSystem))
 
     if uid is not None:
         command += ' --uid {}'.format(uid)
@@ -455,9 +505,10 @@ def stop(names):
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--name', default=None, help="The name to use for this file")
 @click.option('--uid', default=None, help='The uuid to use for this file')
+@click.option('--link-file', default=None, is_flag=True, help="Link the file to the hg-data directory instead of copying it")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
-def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid):
+def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid, link_file):
     '''
     Ingest a dataset
     '''
@@ -492,8 +543,10 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
 
 
 
-    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header)
-    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid)
+    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, link_file)
+
+
+    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, link_file)
 
 
 @cli.command()
