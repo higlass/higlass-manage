@@ -113,21 +113,7 @@ def import_linked_file(hg_name, filepath, filetype, datatype, assembly, name, ui
 
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link_file):
     # get this container's temporary directory
-    if link_file:
-        data_dir = get_data_dir(hg_name)
-
-        linked_dir = op.join(data_dir, 'linked')
-        if not op.exists(linked_dir):
-            os.makedirs(linked_dir)
-
-        filename = op.split(filepath)[1]
-        to_import_path = op.join(linked_dir, filename)
-
-        if op.islink(to_import_path):
-            print("file already exists")
-        else:
-            os.link(filepath, to_import_path)
-    else:
+    if not link_file:
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
@@ -143,6 +129,8 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link
                 os.remove(to_import_path)
 
             os.link(filepath, to_import_path)
+    else:
+        filename = filepath
 
     coordSystem = '--coordSystem {}'.format(assembly) if assembly is not None else ''
     name_text = '--name "{}"'.format(name) if name is not None else ''
@@ -155,7 +143,7 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link
 
     if link_file:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
-                ' /data/media/linked/'.format(filename) +
+                ' {}'.format(filename) +
                 ' --filetype {} --datatype {} {} {} --no-upload'.format(
                     filetype, datatype, name_text, coordSystem))
     else:
@@ -288,10 +276,14 @@ def update_hm_config(hm_config):
         default=None,
         help='When creating an external-facing instance, enter its IP or hostname using this parameter',
         type=str)
+@click.option('-m', '--media-directory',
+        default=None,
+        help='Use a specific media directory for uploaded files',
+        type=str)
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def start(temp_dir, data_dir, version, port, name, site_url, public_data):
+def start(temp_dir, data_dir, version, port, name, site_url, media_directory, public_data):
     '''
     Start a HiGlass instance
     '''
@@ -337,12 +329,19 @@ def start(temp_dir, data_dir, version, port, name, site_url, public_data):
     version_addition = '' if version is None else ':{}'.format(version)
 
     print('Starting...', name, port)
+    volumes={
+        temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
+        data_dir : { 'bind' : '/data', 'mode' : 'rw' }
+        }
+
+    if media_directory:
+        volumes[media_directory] = { 'bind' : '/media', 'mode' : 'rw' }
+        environment['HIGLASS_MEDIA_ROOT'] = '/media'
+
+
     container = client.containers.run(image,
             ports={80 : port},
-            volumes={
-                temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
-                data_dir : { 'bind' : '/data', 'mode' : 'rw' }
-                },
+            volumes=volumes,
             name=container_name,
             environment=environment,
             detach=True)
@@ -513,7 +512,7 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
     Ingest a dataset
     '''
 
-    if not op.exists(filename) and not op.islink(filename):
+    if not link_file and (not op.exists(filename) and not op.islink(filename)):
         print('File not found:', filename, file=sys.stderr)
         return
 
