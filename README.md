@@ -23,6 +23,20 @@ pip install higlass-manage
 
 HiGlass wraps the Docker commands for starting, stopping, listing and populating local higlass instances.
 
+## Tests
+
+To run the tests, first get the test data:
+
+```
+./get_test_data.py
+```
+
+And then run the tests:
+
+```
+./tests.sh
+```
+
 ### Starting a HiGlass instance
 
 Start a local higlass instance using the default data and temporary directories: `~/hg-data` and `/tmp/higlass-docker`. 

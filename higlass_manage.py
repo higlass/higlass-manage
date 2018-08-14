@@ -27,9 +27,9 @@ def hg_name_to_container_name(hg_name):
 def cli():
     pass
 
-def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, link_file):
+def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload):
     if filetype == 'bedfile':
-        if link_file:
+        if no_upload:
             raise Exception("Bedfile files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
             
         if assembly is None and chromsizes_filename is None:
@@ -58,7 +58,7 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
             filetype='beddb'
             return (to_import, filetype)
     elif filetype == 'bedpe':
-        if link_file:
+        if no_upload:
             raise Exception("Bedpe files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
         if assembly is None and chromsizes_filename is None:
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
@@ -111,9 +111,9 @@ def import_linked_file(hg_name, filepath, filetype, datatype, assembly, name, ui
     '''
 
 
-def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link_file):
+def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload):
     # get this container's temporary directory
-    if not link_file:
+    if not no_upload:
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
@@ -138,10 +138,11 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, link
     print('name_text: {}'.format(name_text))
 
     client = docker.from_env()
+    print("hg_name:", hg_name)
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
-    if link_file:
+    if no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' {}'.format(filename) +
                 ' --filetype {} --datatype {} {} {} --no-upload'.format(
@@ -268,7 +269,7 @@ def update_hm_config(hm_config):
         default=8989,
         help='The port that the HiGlass instance should run on',
         type=str)
-@click.option('-n', '--name',
+@click.option('-n', '--hg-name',
         default='default',
         help='The name for this higlass instance',
         type=str)
@@ -276,18 +277,18 @@ def update_hm_config(hm_config):
         default=None,
         help='When creating an external-facing instance, enter its IP or hostname using this parameter',
         type=str)
-@click.option('-m', '--media-directory',
+@click.option('-m', '--media-dir',
         default=None,
         help='Use a specific media directory for uploaded files',
         type=str)
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def start(temp_dir, data_dir, version, port, name, site_url, media_directory, public_data):
+def start(temp_dir, data_dir, version, port, hg_name, site_url, media_dir, public_data):
     '''
     Start a HiGlass instance
     '''
-    container_name = '{}-{}'.format(CONTAINER_PREFIX,name)
+    container_name = '{}-{}'.format(CONTAINER_PREFIX,hg_name)
 
     client = docker.from_env()
 
@@ -328,14 +329,14 @@ def start(temp_dir, data_dir, version, port, name, site_url, media_directory, pu
 
     version_addition = '' if version is None else ':{}'.format(version)
 
-    print('Starting...', name, port)
+    print('Starting...', hg_name, port)
     volumes={
         temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
         data_dir : { 'bind' : '/data', 'mode' : 'rw' }
         }
 
-    if media_directory:
-        volumes[media_directory] = { 'bind' : '/media', 'mode' : 'rw' }
+    if media_dir:
+        volumes[media_dir] = { 'bind' : '/media', 'mode' : 'rw' }
         environment['HIGLASS_MEDIA_ROOT'] = '/media'
 
 
@@ -346,6 +347,15 @@ def start(temp_dir, data_dir, version, port, name, site_url, media_directory, pu
             environment=environment,
             detach=True)
     print('Docker started: {}'.format(container_name))
+
+    started = False
+    while not started:
+        try:
+            req = requests.get('http://localhost:{}/api/v1/tilesets/'.format(port))
+            break
+        except requests.exceptions.ConnectionError:
+            print("Waiting to start...")
+            time.sleep(0.5)
 
     if not public_data:
         started = False
@@ -504,15 +514,15 @@ def stop(names):
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--name', default=None, help="The name to use for this file")
 @click.option('--uid', default=None, help='The uuid to use for this file')
-@click.option('--link-file', default=None, is_flag=True, help="Link the file to the hg-data directory instead of copying it")
+@click.option('--no-upload', default=None, is_flag=True, help="Do not copy the file to the media directory. File must already be in the media directory.")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
-def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid, link_file):
+def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid, no_upload):
     '''
     Ingest a dataset
     '''
 
-    if not link_file and (not op.exists(filename) and not op.islink(filename)):
+    if not no_upload and (not op.exists(filename) and not op.islink(filename)):
         print('File not found:', filename, file=sys.stderr)
         return
 
@@ -542,10 +552,10 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
 
 
 
-    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, link_file)
+    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload)
 
 
-    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, link_file)
+    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
 
 
 @cli.command()
