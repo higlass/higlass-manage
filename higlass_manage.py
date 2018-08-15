@@ -144,12 +144,12 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     if no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
-                ' {}'.format(filename) +
+                ' {}'.format(filename.replace(' ', '\ ')) +
                 ' --filetype {} --datatype {} {} {} --no-upload'.format(
                     filetype, datatype, name_text, coordSystem))
     else:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
-                ' /tmp/{}'.format(filename) +
+                ' /tmp/{}'.format(filename.replace(' ', '\ ')) +
                 ' --filetype {} --datatype {} {} {}'.format(
                     filetype, datatype, name_text, coordSystem))
 
