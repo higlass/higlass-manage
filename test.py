@@ -4,6 +4,8 @@ import os.path as op
 import subprocess as sp
 import time
 
+sp.call('bash get_test_data.sh', shell=True)
+
 if op.exists('test-hg_data'):
     sp.call('rm -rf test-hg-data', shell=True)
 if op.exists('test-hg-media'):
@@ -32,3 +34,5 @@ sp.call('python higlass_manage.py stop test-hg', shell=True)
 
 sp.call('rm -rf test-hg-data', shell=True)
 sp.call('rm -rf test-hg-media', shell=True)
+
+print("Passed all tests")
