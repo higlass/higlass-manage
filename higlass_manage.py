@@ -301,6 +301,10 @@ def start(temp_dir, data_dir, version, port, hg_name, site_url, media_dir, publi
     except docker.errors.NotFound:
         # container isn't running so no need to stop it
         pass
+    except requests.exceptions.ConnectionError:
+        print('Error connecting to the Docker daemon, make sure it is started and you are logged in.')
+        return
+
 
     if version == 'local':
         image = client.images.get('image-default')
