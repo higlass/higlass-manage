@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-if [! -d data]; then
-    mkdir data
-fi;
+mkdir -p data
 
 FILES=$(cat <<END
 Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool

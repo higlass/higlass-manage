@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+
 import argparse
 import click
 import clodius.cli.aggregate as cca
@@ -14,9 +16,6 @@ import sys
 import tempfile
 import time
 import webbrowser
-
-if sys.version_info[0] < 3:
-    raise Exception("Python 3 or a more recent version is required.")
 
 CONTAINER_PREFIX = 'higlass-manage-container'
 
@@ -472,7 +471,7 @@ def list_data(hg_name):
 
 @cli.command()
 @click.argument('names', nargs=-1)
-def browser(names):
+def browse(names):
     '''
     Launch a web browser for a running instance
     '''
