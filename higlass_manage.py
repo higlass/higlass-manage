@@ -212,6 +212,8 @@ def datatype_to_tracktype(datatype):
         return ('heatmap', 'center')
     elif datatype == 'vector':
         return ('horizontal-line', 'top')
+    elif datatype == 'gene-annotations':
+        return ('horizontal-gene-annotations', 'top')
 
     return None
 
@@ -226,6 +228,8 @@ def infer_filetype(filename):
         return 'time-interval-json'
     elif ext.lower() == '.hitile':
         return 'hitile'
+    elif ext.lower() == '.beddb':
+        return 'beddb'
 
     return None
 
@@ -280,10 +284,12 @@ def update_hm_config(hm_config):
         default='default',
         help='The name for this higlass instance',
         type=str)
+@click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
+@click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def view(filename, hg_name, public_data):
+def view(filename, hg_name, filetype, datatype, public_data):
     '''
     View a file in higlass.
 
@@ -338,8 +344,6 @@ def view(filename, hg_name, public_data):
         print("Error getting a list of existing tilesets", file=sys.stderr)
         return
 
-    print("uuid:", uuid)
-
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
         uuid = _ingest(filename, hg_name)
@@ -350,16 +354,20 @@ def view(filename, hg_name, public_data):
 
     import hgflask.client as hgc
 
-
-    filetype = infer_filetype(filename)
-    datatype = infer_datatype(filetype)
-    (tracktype, position) = datatype_to_tracktype(datatype)
+    # guess filetype and datatype if they're None
+    (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
+    try:
+        (tracktype, position) = datatype_to_tracktype(datatype)
+    except ValueError as ve:
+        print("ERROR: Unknown track type for the given datatype:", datatype)
+        return
 
     conf = hgc.HiGlassConfig()
     view = conf.add_view()
     track = view.add_track(track_type=tracktype,
             server='http://localhost:{}/api/v1/'.format(port),
-            tileset_uuid=uuid, position='center')
+            tileset_uuid=uuid, position=position, 
+            height=200)
 
     conf = json.loads(conf.to_json_string())
     
@@ -640,6 +648,52 @@ def stop(names):
         except docker.errors.NotFound as ex:
             print("Instance not running: {}".format(name))
 
+def fill_filetype_and_datatype(filename, filetype, datatype):
+    '''
+    If no filetype or datatype are provided, add them
+    based on the given filename.
+
+    Paramters:
+    ----------
+    filename: str
+        The name of the file
+    filetype: str
+        The type of the file (can be None)
+    datatype: str
+        The datatype for the data in the file (can be None)
+
+    Returns:
+    --------
+    (filetype, datatype): (str, str)
+        Filled in filetype and datatype based on the given filename
+    '''
+    if filetype is None:
+        # no filetype provided, try a few common filetypes
+        filetype = infer_filetype(filename)
+        print('Inferred filetype:', filetype)
+
+        if filetype is None:
+            recommended_filetype = recommend_filetype(filename)
+
+            print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
+            if recommended_filetype is not None:
+                print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
+            
+            return None
+
+    if datatype is None:
+        datatype = infer_datatype(filetype)
+        print('Inferred datatype:', datatype)
+
+        if datatype is None:
+            recommended_datatype = recommend_datatype(filetype)
+            print('Unknown datatype, please specify using the --datatype option', file=sys.stderr)
+            if recommended_datatype is not None:
+                print("Based on the filetype, you may want to try the datatype: {}".format(recommended_datatype))
+
+    return (filetype, datatype)
+
+
 @cli.command()
 @click.argument('filename')
 @click.option('--hg-name', default='default', 
@@ -690,34 +744,9 @@ def _ingest(filename,
         print('File not found:', filename, file=sys.stderr)
         return None
 
-    if filetype is None:
-        # no filetype provided, try a few common filetypes
-        filetype = infer_filetype(filename)
-        print('Inferred filetype:', filetype)
-
-        if filetype is None:
-            recommended_filetype = recommend_filetype(filename)
-
-            print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
-            if recommended_filetype is not None:
-                print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
-            
-            return None
-
-    if datatype is None:
-        datatype = infer_datatype(filetype)
-        print('Inferred datatype:', datatype)
-
-        if datatype is None:
-            recommended_datatype = recommend_datatype(filetype)
-            print('Unknown datatype, please specify using the --datatype option', file=sys.stderr)
-            if recommended_datatype is not None:
-                print("Based on the filetype, you may want to try the datatype: {}".format(recommended_datatype))
-
-
-
+    # guess filetype and datatype if they're None
+    (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload)
-
 
     import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
 
