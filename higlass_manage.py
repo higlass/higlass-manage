@@ -8,9 +8,11 @@ import clodius.cli.aggregate as cca
 import clodius.chromosomes as cch
 import docker
 import json
+import ntpath
 import os
 import os.path as op
 import requests
+import slugid
 import subprocess as sp
 import sys
 import tempfile
@@ -154,6 +156,9 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     if uid is not None:
         command += ' --uid {}'.format(uid)
+    else:
+        uid = slugid.nice().decode('utf8')
+        command += ' --uid {}'.format(uid)
 
     print('command:', command)
 
@@ -162,8 +167,9 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     if exit_code != 0:
         print("ERROR:", output.decode('utf8'), file=sys.stderr)
+        return None
 
-    pass
+    return uid
 
 def get_temp_dir(hg_name):
     client = docker.from_env()
@@ -191,6 +197,14 @@ def get_port(hg_name):
     port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
 
     return port
+
+def datatype_to_tracktype(datatype):
+    if datatype == 'matrix':
+        return ('heatmap', 'center')
+    elif datatype == 'vector':
+        return ('horizontal-line', 'top')
+
+    return None
 
 def infer_filetype(filename):
     _,ext = op.splitext(filename)
@@ -250,6 +264,104 @@ def update_hm_config(hm_config):
             json.write(f, hm_config)
     except Exception as ex:
         print("Error updating the hm_config: {}".format(ex))
+
+@cli.command()
+@click.argument('filename', nargs=1)
+@click.option('-n', '--hg-name',
+        default='default',
+        help='The name for this higlass instance',
+        type=str)
+@click.option('--public-data/--no-public-data',
+        default=True,
+        help='Include or exclude public data in the list of available tilesets')
+def view(filename, hg_name, public_data):
+    '''
+    View a file in higlass.
+
+    The user can specify an instance to view it in. If one is
+    not specified the default will be used. If the default isn't
+    running, it will be started.
+
+    Parameters:
+    -----------
+    hg_name: string
+        The name of the higlass instance
+    filename: string
+        The name of the file to view
+    '''
+    temp_dir = get_temp_dir(hg_name)
+
+    # check if we have a running instance
+    # if not, start one
+
+    # get a list of the available tilesets
+    # check if any match the filename of this file
+    # if the filenames match, check if the checksums match
+    port = get_port(hg_name)
+    uuid = None
+
+    try:
+        MAX_TILESETS=100000
+        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS))
+        
+        tilesets = json.loads(req.content)
+
+        for tileset in tilesets['results']:
+            import_filename = ntpath.basename(filename)
+            tileset_filename = ntpath.basename(tileset['datafile'])
+
+            print("tileset_filename:", tileset_filename, import_filename)
+
+            if tileset_filename == import_filename:
+                uuid = tileset['uuid']
+    except requests.exceptions.ConnectionError:
+        print("Error getting a list of existing tilesets", file=sys.stderr)
+        return
+
+    print("uuid:", uuid)
+
+    if uuid is None:
+        # we haven't found a matching tileset so we need to ingest this one
+        uuid = _ingest(filename, hg_name)
+
+    if uuid is None:
+        # couldn't ingest the file
+        return
+
+    import hgflask.client as hgc
+
+
+    filetype = infer_filetype(filename)
+    datatype = infer_datatype(filetype)
+    (tracktype, position) = datatype_to_tracktype(datatype)
+
+    conf = hgc.HiGlassConfig()
+    view = conf.add_view()
+    track = view.add_track(track_type=tracktype,
+            server='http://localhost:{}/api/v1/'.format(port),
+            tileset_uuid=uuid, position='center')
+
+    conf = json.loads(conf.to_json_string())
+    
+    conf['trackSourceServers'] = []
+    conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
+
+    if public_data:
+        conf['trackSourceServers'] += ['http://higlass.io/api/v1/']
+
+
+    # uplaod the viewconf
+    res = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port),
+            json={'viewconf': conf})
+
+    if res.status_code != 200:
+        print("Error posting viewconf:", res.status, res.content)
+        return
+
+    uid = json.loads(res.content)['uid']
+
+    webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
+        port=port, uid=uid))
 
 @cli.command()
 @click.option('-t', '--temp-dir',
@@ -520,14 +632,43 @@ def stop(names):
 @click.option('--no-upload', default=None, is_flag=True, help="Do not copy the file to the media directory. File must already be in the media directory.")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
-def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_filename, has_header, uid, no_upload):
+def ingest(filename, 
+        hg_name, 
+        filetype=None, 
+        datatype=None, 
+        assembly=None, 
+        name=None, 
+        chromsizes_filename=None, 
+        has_header=False, 
+        uid=None, 
+        no_upload=None):
     '''
     Ingest a dataset
     '''
+    _ingest(filename,
+            filetype,
+            datatype,
+            assembly,
+            name,
+            chromsizes_filename,
+            has_header,
+            uid,
+            no_upload)
+
+def _ingest(filename, 
+        hg_name, 
+        filetype=None, 
+        datatype=None, 
+        assembly=None, 
+        name=None, 
+        chromsizes_filename=None, 
+        has_header=False, 
+        uid=None, 
+        no_upload=None):
 
     if not no_upload and (not op.exists(filename) and not op.islink(filename)):
         print('File not found:', filename, file=sys.stderr)
-        return
+        return None
 
     if filetype is None:
         # no filetype provided, try a few common filetypes
@@ -541,7 +682,7 @@ def ingest(filename, hg_name, filetype, datatype, assembly, name, chromsizes_fil
             if recommended_filetype is not None:
                 print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
             
-            return
+            return None
 
     if datatype is None:
         datatype = infer_datatype(filetype)
