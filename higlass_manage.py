@@ -7,6 +7,7 @@ import click
 import clodius.cli.aggregate as cca
 import clodius.chromosomes as cch
 import docker
+import hashlib
 import json
 import ntpath
 import os
@@ -20,6 +21,14 @@ import time
 import webbrowser
 
 CONTAINER_PREFIX = 'higlass-manage-container'
+
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
 
 def hg_name_to_container_name(hg_name):
     return '{}-{}'.format(CONTAINER_PREFIX, hg_name)
@@ -310,10 +319,21 @@ def view(filename, hg_name, public_data):
             import_filename = ntpath.basename(filename)
             tileset_filename = ntpath.basename(tileset['datafile'])
 
-            print("tileset_filename:", tileset_filename, import_filename)
+            subpath_index = tileset['datafile'].find('/tilesets/')
+            subpath = tileset['datafile'][subpath_index + len('/tilesets/'):]
+
+            data_dir = get_data_dir(hg_name)
+            tileset_path = op.join(data_dir, subpath)
 
             if tileset_filename == import_filename:
-                uuid = tileset['uuid']
+                # same filenames, make sure they're actually the same file
+                # by comparing checksums
+                checksum1 = md5(tileset_path)
+                checksum2 = md5(filename)
+
+                if checksum1 == checksum2:
+                    uuid = tileset['uuid']
+                    break
     except requests.exceptions.ConnectionError:
         print("Error getting a list of existing tilesets", file=sys.stderr)
         return
