@@ -37,6 +37,14 @@ And then run the tests:
 ./tests.sh
 ```
 
+### Quickly viewing a dataset
+
+The simplest way to get started is to open and view a dataset. The higlass-manage view command will automatically start a new instance if one isn’t already running, add the given dataset and display it in a browser. Currently, the higlass-manage view command only works with cooler, bigWig, chromsizes and gene-annotation files.
+
+```
+higlass-manage view
+```
+
 ### Starting a HiGlass instance
 
 Start a local higlass instance using the default data and temporary directories: `~/hg-data` and `/tmp/higlass-docker`. 
