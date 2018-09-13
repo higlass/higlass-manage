@@ -310,7 +310,10 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     filename: string
         The name of the file to view
     '''
-    temp_dir = get_temp_dir(hg_name)
+    try:
+        temp_dir = get_temp_dir(hg_name)
+    except Exception:
+        _start(hg_name=hg_name)
 
     # check if we have a running instance
     # if not, start one
@@ -441,7 +444,31 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def start(temp_dir, data_dir, version, port, hg_name, site_url, media_dir, public_data):
+def _start(temp_dir,
+            data_dir,
+            version,
+            port,
+            hg_name,
+            sire_url,
+            media_dir,
+            public_data):
+    _start(temp_dir,
+            data_dir,
+            version,
+            port,
+            hg_name,
+            sire_url,
+            media_dir,
+            public_data)
+
+def _start(temp_dir='/tmp/higlass-docker', 
+        data_dir='~/hg-data', 
+        version='latest', 
+        port=8989, 
+        hg_name='default', 
+        site_url=None,
+        media_dir=None, 
+        public_data=True):
     '''
     Start a HiGlass instance
     '''
@@ -513,9 +540,12 @@ def start(temp_dir, data_dir, version, port, hg_name, site_url, media_dir, publi
     while not started:
         try:
             req = requests.get('http://localhost:{}/api/v1/tilesets/'.format(port))
-            break
+
+            if req.status_code == 200:
+                print("Non 200 status code (req.status_code), waiting...")
+                break
         except requests.exceptions.ConnectionError:
-            print("Waiting to start...")
+            print("Waiting to start (tilesets)...")
             time.sleep(0.5)
 
     if not public_data:
