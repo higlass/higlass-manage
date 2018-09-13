@@ -1,7 +1,11 @@
+v0.2.0
+
+* Added the higlass-manage view command
+
 v0.1.9
 
-Added the higlass-manage deletesuperuser command
+* Added the higlass-manage deletesuperuser command
 
 v0.1.8
 
-Added the higlass-manage createsuperuser
+* Added the higlass-manage createsuperuser
