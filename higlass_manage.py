@@ -211,9 +211,13 @@ def datatype_to_tracktype(datatype):
     if datatype == 'matrix':
         return ('heatmap', 'center')
     elif datatype == 'vector':
-        return ('horizontal-line', 'top')
+        return ('horizontal-bar', 'top')
     elif datatype == 'gene-annotations':
         return ('horizontal-gene-annotations', 'top')
+    elif datatype == 'chromsizes':
+        return ('horizontal-chromosome-labels', 'top')
+    elif datatype == '2d-rectangle-domains':
+        return '2d-rectangle-domains'
 
     return None
 
@@ -286,10 +290,12 @@ def update_hm_config(hm_config):
         type=str)
 @click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
 @click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
+@click.option('--tracktype', default=None, help="The track type used to view this file")
+@click.option('--position', default=None, help="The position in the view to place this track")
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def view(filename, hg_name, filetype, datatype, public_data):
+def view(filename, hg_name, filetype, datatype, tracktype, position, public_data):
     '''
     View a file in higlass.
 
@@ -315,6 +321,12 @@ def view(filename, hg_name, filetype, datatype, public_data):
     port = get_port(hg_name)
     uuid = None
 
+    # guess filetype and datatype if they're None
+    (filetype, inferred_datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
+
+    if filetype is None or inferred_datatype is None:
+        return
+
     try:
         MAX_TILESETS=100000
         req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS))
@@ -322,7 +334,7 @@ def view(filename, hg_name, filetype, datatype, public_data):
         tilesets = json.loads(req.content)
 
         for tileset in tilesets['results']:
-            import_filename = ntpath.basename(filename)
+            import_filename = op.splitext(ntpath.basename(filename))[0]
             tileset_filename = ntpath.basename(tileset['datafile'])
 
             subpath_index = tileset['datafile'].find('/tilesets/')
@@ -331,7 +343,10 @@ def view(filename, hg_name, filetype, datatype, public_data):
             data_dir = get_data_dir(hg_name)
             tileset_path = op.join(data_dir, subpath)
 
-            if tileset_filename == import_filename:
+            # print("import_filename", import_filename)
+            # print("tileset_filename", tileset_filename)
+
+            if tileset_filename.find(import_filename) >= 0:
                 # same filenames, make sure they're actually the same file
                 # by comparing checksums
                 checksum1 = md5(tileset_path)
@@ -346,7 +361,7 @@ def view(filename, hg_name, filetype, datatype, public_data):
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name)
+        uuid = _ingest(filename, hg_name, filetype, datatype)
 
     if uuid is None:
         # couldn't ingest the file
@@ -354,16 +369,19 @@ def view(filename, hg_name, filetype, datatype, public_data):
 
     import hgflask.client as hgc
 
-    # guess filetype and datatype if they're None
-    (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
-    try:
-        (tracktype, position) = datatype_to_tracktype(datatype)
-    except ValueError as ve:
-        print("ERROR: Unknown track type for the given datatype:", datatype)
-        return
+    if datatype is None:
+        datatype = inferred_datatype
+
+    if tracktype is None and position is None:
+        try:
+            (tracktype, position) = datatype_to_tracktype(datatype)
+        except ValueError as ve:
+            print("ERROR: Unknown track type for the given datatype:", datatype)
+            return
 
     conf = hgc.HiGlassConfig()
     view = conf.add_view()
+    print("tracktype:", tracktype)
     track = view.add_track(track_type=tracktype,
             server='http://localhost:{}/api/v1/'.format(port),
             tileset_uuid=uuid, position=position, 
@@ -748,7 +766,7 @@ def _ingest(filename,
     (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload)
 
-    import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
+    return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
 
 
 @cli.command()
