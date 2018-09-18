@@ -444,12 +444,12 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def _start(temp_dir,
+def start(temp_dir,
             data_dir,
             version,
             port,
             hg_name,
-            sire_url,
+            site_url,
             media_dir,
             public_data):
     _start(temp_dir,
@@ -457,7 +457,7 @@ def _start(temp_dir,
             version,
             port,
             hg_name,
-            sire_url,
+            site_url,
             media_dir,
             public_data)
 
@@ -549,44 +549,23 @@ def _start(temp_dir='/tmp/higlass-docker',
             time.sleep(0.5)
 
     if not public_data:
-        started = False
-        while not started:
-            try:
-                req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port))
-                if req.status_code != 200:
-                    print('Waiting to start...', req.status_code)
-                    time.sleep(0.5)
-                else:
-                    config = json.loads(req.content.decode('utf-8'))
-                    config['trackSourceServers'] = ['/api/v1']
-                    started = True
-                    # print('config', json.dumps(config, indent=2))
-                    config = {
-                            'uid': 'default_local',
-                            'viewconf': config
-                            }
+        config = json.loads(req.content.decode('utf-8'))
+        config['trackSourceServers'] = ['/api/v1']
+        started = True
+        # print('config', json.dumps(config, indent=2))
+        config = {
+                'uid': 'default_local',
+                'viewconf': config
+                }
 
-                    ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
-                    # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
-                    ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
-                    ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
-                    ret = container.exec_run('cp higlass-website/app/index.html higlass-website/index.html')
+        ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
+        # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
+        ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
+        ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
+        ret = container.exec_run('cp higlass-website/app/index.html higlass-website/index.html')
 
-                    # requests.post('http://localhost:{}/api/v1/viewconfs/, 
-            except requests.exceptions.ConnectionError:
-                print("Waiting to start...")
-            time.sleep(0.5)
-    return
+    print("Started")
 
-    sp.call(['docker', 'run', '--detach',
-        '--publish', str(port) + ':80',
-        '--volume', temp_dir + ':/tmp',
-        '--volume', data_dir + ':/data',
-        '--name', 'higlass-container',
-        'gehlenborglab/higlass'])
-    
-    webbrowser.open('http://localhost:{port}/app'.format(port=port))
-    pass
 
 @cli.command()
 def list():
@@ -768,6 +747,7 @@ def ingest(filename,
     Ingest a dataset
     '''
     _ingest(filename,
+            hg_name,
             filetype,
             datatype,
             assembly,
@@ -800,7 +780,7 @@ def _ingest(filename,
 
 
 @cli.command()
-@click.argument('hg_name', nargs=-1)
+@click.argument('hg-name', nargs=-1)
 def shell(hg_name):
     '''
     Start a shell in a higlass container
