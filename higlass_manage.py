@@ -37,7 +37,7 @@ def hg_name_to_container_name(hg_name):
 def cli():
     pass
 
-def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload):
+def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, tmp_dir):
     if filetype == 'bedfile':
         if no_upload:
             raise Exception("Bedfile files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
@@ -46,27 +46,26 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
             return
 
-        with tempfile.TemporaryDirectory() as td:
-            output_file = op.join(td, filename + '.beddb')
+        output_file = op.join(tmp_dir, filename + '.beddb')
 
-            print("Aggregating bedfile")
-            cca._bedfile(filename,
-                    output_file,
-                    assembly,
-                    importance_column='random',
-                    has_header=has_header,
-                    chromosome=None,
-                    max_per_tile=50,
-                    delimiter=None,
-                    chromsizes_filename=chromsizes_filename,
-                    offset=0,
-                    tile_size=1024)
+        print("Aggregating bedfile")
+        cca._bedfile(filename,
+                output_file,
+                assembly,
+                importance_column='random',
+                has_header=has_header,
+                chromosome=None,
+                max_per_tile=50,
+                delimiter=None,
+                chromsizes_filename=chromsizes_filename,
+                offset=0,
+                tile_size=1024)
 
-            to_import = output_file
+        to_import = output_file
 
-            # because we aggregated the file, the new filetype is beddb
-            filetype='beddb'
-            return (to_import, filetype)
+        # because we aggregated the file, the new filetype is beddb
+        filetype='beddb'
+        return (to_import, filetype)
     elif filetype == 'bedpe':
         if no_upload:
             raise Exception("Bedpe files need to be aggregated and cannot be linked. Consider not using the --link-file option", file=sys.stderr)
@@ -74,25 +73,24 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
             return
 
-        with tempfile.TemporaryDirectory() as td:
-            output_file = op.join(td, filename + '.beddb')
+        output_file = op.join(tmp_dir, filename + '.bed2ddb')
 
-            print("Aggregating bedfile")
-            cca._bedpe(filename,
-                    output_file,
-                    assembly,
-                    importance_column='random',
-                    has_header=has_header,
-                    chromosome=None,
-                    max_per_tile=50,
-                    chromsizes_filename=chromsizes_filename,
-                    tile_size=1024)
+        print("Aggregating bedpe")
+        cca._bedpe(filename,
+                output_file,
+                assembly,
+                importance_column='random',
+                has_header=has_header,
+                chromosome=None,
+                max_per_tile=50,
+                chromsizes_filename=chromsizes_filename,
+                tile_size=1024)
 
-            to_import = output_file
+        to_import = output_file
 
-            # because we aggregated the file, the new filetype is beddb
-            filetype='bed2ddb'
-            return (to_import, filetype)
+        # because we aggregated the file, the new filetype is beddb
+        filetype='bed2ddb'
+        return (to_import, filetype)
     else:
         return (filename, filetype)
 
@@ -217,7 +215,7 @@ def datatype_to_tracktype(datatype):
     elif datatype == 'chromsizes':
         return ('horizontal-chromosome-labels', 'top')
     elif datatype == '2d-rectangle-domains':
-        return '2d-rectangle-domains'
+        return ('2d-rectangle-domains', 'center')
 
     return None
 
@@ -295,7 +293,10 @@ def update_hm_config(hm_config):
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data):
+@click.option('--assembly', default=None, help="The assembly that this data is mapped to")
+@click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
+def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
+        assembly, chromsizes_filename):
     '''
     View a file in higlass.
 
@@ -364,7 +365,8 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name, filetype, datatype)
+        uuid = _ingest(filename, hg_name, filetype, datatype, assembly=assembly,
+                chromsizes_filename=chromsizes_filename)
 
     if uuid is None:
         # couldn't ingest the file
@@ -774,9 +776,10 @@ def _ingest(filename,
 
     # guess filetype and datatype if they're None
     (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
-    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload)
+    with tempfile.TemporaryDirectory() as td:
+        (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, td)
 
-    return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
+        return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
 
 
 @cli.command()

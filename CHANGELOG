@@ -1,3 +1,7 @@
+v0.2.2
+
+- Fixed on-the-fly aggregation for bedpe files (missing directory issue)
+
 v0.2.0
 
 * Added the higlass-manage view command
