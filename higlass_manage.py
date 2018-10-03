@@ -539,13 +539,19 @@ def _start(temp_dir='/tmp/higlass-docker',
     print('Docker started: {}'.format(container_name))
 
     started = False
+    counter = 1
     while not started:
         try:
+            print("sending request", counter)
+            counter += 1
             req = requests.get('http://localhost:{}/api/v1/tilesets/'.format(port))
+            print("request returned", req.status_code)
 
-            if req.status_code == 200:
-                print("Non 200 status code (req.status_code), waiting...")
-                break
+            if req.status_code != 200:
+                print("Non 200 status code returned ({}), waiting...".format(req.status_code))
+                time.sleep(0.5)
+            else:
+                started = True
         except requests.exceptions.ConnectionError:
             print("Waiting to start (tilesets)...")
             time.sleep(0.5)
