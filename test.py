@@ -12,8 +12,8 @@ if op.exists('test-hg-media'):
     sp.check_call('rm -rf test-hg-media', shell=True)
 
 # directories that will store data and media
-sp.check_call('mkdir test-hg-data', shell=True)
-sp.check_call('mkdir test-hg-media', shell=True)
+sp.call('mkdir test-hg-data', shell=True)
+sp.call('mkdir test-hg-media', shell=True)
 
 sp.check_call('cp data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool test-hg-media/dixon.mcool',
         shell=True)

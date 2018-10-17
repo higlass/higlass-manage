@@ -388,11 +388,11 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     view = conf.add_view()
     print("tracktype:", tracktype)
     track = view.add_track(track_type=tracktype,
-            server='http://localhost:{}/api/v1/'.format(port),
+            api_url='http://localhost:{}/api/v1/'.format(port),
             tileset_uuid=uuid, position=position, 
             height=200)
 
-    conf = json.loads(conf.to_json_string())
+    conf = json.loads(json.dumps(conf.to_json()))
     
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
