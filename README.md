@@ -28,13 +28,13 @@ HiGlass wraps the Docker commands for starting, stopping, listing and populating
 To run the tests, first get the test data:
 
 ```
-./get_test_data.py
+./get_test_data.sh
 ```
 
 And then run the tests:
 
 ```
-./tests.sh
+python test.py
 ```
 
 ### Quickly viewing a dataset
@@ -42,7 +42,8 @@ And then run the tests:
 The simplest way to get started is to open and view a dataset. The higlass-manage view command will automatically start a new instance if one isn’t already running, add the given dataset and display it in a browser. Currently, the higlass-manage view command only works with cooler, bigWig, chromsizes and gene-annotation files.
 
 ```
-higlass-manage view
+wget https://s3.amazonaws.com/pkerp/public/hic-resolutions.cool
+higlass-manage view hic-resolutions.cool
 ```
 
 ### Starting a HiGlass instance

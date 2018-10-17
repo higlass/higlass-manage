@@ -6,3 +6,6 @@ dist
 *.egg-info
 __pycache__
 data
+.idea/
+test-hg-data/
+test-hg-media/
