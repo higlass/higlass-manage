@@ -28,13 +28,13 @@ HiGlass wraps the Docker commands for starting, stopping, listing and populating
 To run the tests, first get the test data:
 
 ```
-./get_test_data.py
+./get_test_data.sh
 ```
 
 And then run the tests:
 
 ```
-./tests.sh
+python test.py
 ```
 
 ### Quickly viewing a dataset
