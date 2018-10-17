@@ -384,7 +384,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
-    conf = hgc.HiGlassConfig()
+    conf = hgc.ViewConf()
     view = conf.add_view()
     print("tracktype:", tracktype)
     track = view.add_track(track_type=tracktype,
