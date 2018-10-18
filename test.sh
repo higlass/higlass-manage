@@ -49,9 +49,6 @@ end wait
 
 start cleanup
     ./higlass_manage.py stop test-hg
-
-    rm -rf test-hg-data
-    rm -rf test-hg-media
 end cleanup
 
 echo 'Passed all tests'
