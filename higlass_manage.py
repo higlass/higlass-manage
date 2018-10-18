@@ -5,7 +5,6 @@ from __future__ import print_function
 import argparse
 import click
 import clodius.cli.aggregate as cca
-import clodius.chromosomes as cch
 import docker
 import hashlib
 import json
@@ -411,7 +410,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     uid = json.loads(res.content)['uid']
 
-    if sys.stdout.isatty():
+    if not os.environ.get('CI'):
         webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
             port=port, uid=uid))
 
@@ -662,7 +661,7 @@ def browse(names):
         print("Error: higlass instance not found. Have you tried starting it using 'higlass-manage start'?", file=sys.stderr)
         return
 
-    if sys.stdout.isatty():
+    if not os.environ.get('CI'):
         webbrowser.open('http://localhost:{port}/app/'.format(port=port))
 
 @cli.command()
