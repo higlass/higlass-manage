@@ -410,7 +410,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     uid = json.loads(res.content)['uid']
 
-    if not os.environ.get('CI'):
+    # make sure this test passes on Travis CI and doesn't try to open
+    # a terminal-based browser which doesn't return
+    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
         webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
             port=port, uid=uid))
 
