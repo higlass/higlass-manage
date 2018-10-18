@@ -411,8 +411,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     uid = json.loads(res.content)['uid']
 
-    webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
-        port=port, uid=uid))
+    if sys.stdout.isatty():
+        webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
+            port=port, uid=uid))
 
 @cli.command()
 @click.option('-t', '--temp-dir',
@@ -661,7 +662,8 @@ def browse(names):
         print("Error: higlass instance not found. Have you tried starting it using 'higlass-manage start'?", file=sys.stderr)
         return
 
-    webbrowser.open('http://localhost:{port}/app/'.format(port=port))
+    if sys.stdout.isatty():
+        webbrowser.open('http://localhost:{port}/app/'.format(port=port))
 
 @cli.command()
 @click.argument('names', nargs=-1)
