@@ -661,7 +661,9 @@ def browse(names):
         print("Error: higlass instance not found. Have you tried starting it using 'higlass-manage start'?", file=sys.stderr)
         return
 
-    if not os.environ.get('CI'):
+    # make sure this test passes on Travis CI and doesn't try to open
+    # a terminal-based browser which doesn't return
+    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
         webbrowser.open('http://localhost:{port}/app/'.format(port=port))
 
 @cli.command()
