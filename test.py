@@ -20,8 +20,8 @@ sp.call('cp data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool test-hg-media
 
 sp.call('python higlass_manage.py view test-hg-media/dixon.mcool', shell=True)
 
-sp.call('python higlass_manage.py start --port 8123 --hg-name test-hg --data-dir $(pwd)/test-hg-data --media-dir $(pwd)/test-hg-media', shell=True)
-sp.call('python higlass_manage.py ingest --hg-name test-hg --no-upload /media/dixon.mcool --uid a', shell=True)
+# sp.call('python higlass_manage.py start --port 8123 --hg-name test-hg --data-dir $(pwd)/test-hg-data --media-dir $(pwd)/test-hg-media', shell=True)
+# sp.call('python higlass_manage.py ingest --hg-name test-hg --no-upload /media/dixon.mcool --uid a', shell=True)
 
 # first one will return bad gateway
 out = sp.check_output('curl localhost:8123/api/v1/tilesets/', shell=True).decode('utf8')
