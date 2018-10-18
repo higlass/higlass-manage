@@ -1,11 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from __future__ import print_function
 
 import argparse
 import click
 import clodius.cli.aggregate as cca
-import clodius.chromosomes as cch
 import docker
 import hashlib
 import json
@@ -411,8 +410,11 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     uid = json.loads(res.content)['uid']
 
-    webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
-        port=port, uid=uid))
+    # make sure this test passes on Travis CI and doesn't try to open
+    # a terminal-based browser which doesn't return
+    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
+        webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
+            port=port, uid=uid))
 
 @cli.command()
 @click.option('-t', '--temp-dir',
@@ -661,7 +663,10 @@ def browse(names):
         print("Error: higlass instance not found. Have you tried starting it using 'higlass-manage start'?", file=sys.stderr)
         return
 
-    webbrowser.open('http://localhost:{port}/app/'.format(port=port))
+    # make sure this test passes on Travis CI and doesn't try to open
+    # a terminal-based browser which doesn't return
+    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
+        webbrowser.open('http://localhost:{port}/app/'.format(port=port))
 
 @cli.command()
 @click.argument('names', nargs=-1)
