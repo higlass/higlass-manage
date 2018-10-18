@@ -6,7 +6,7 @@ import time
 
 sp.call('bash get_test_data.sh', shell=True)
 
-if op.exists('test-hg_data'):
+if op.exists('test-hg-data'):
     sp.check_call('rm -rf test-hg-data', shell=True)
 if op.exists('test-hg-media'):
     sp.check_call('rm -rf test-hg-media', shell=True)
