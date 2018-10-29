@@ -9,7 +9,7 @@ This utility script helps manage local HiGlass instances
 To use this utility, you will require:
 
 * [Docker](https://www.docker.com/community-edition)
-* Python
+* Python 3
 
 ## Installation
 
