@@ -546,8 +546,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             print("sending request", counter)
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/tilesets/'.format(port))
-            print("request returned", req.status_code)
+            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port))
+            # print("request returned", req.status_code, req.content)
 
             if req.status_code != 200:
                 print("Non 200 status code returned ({}), waiting...".format(req.status_code))
@@ -568,7 +568,10 @@ def _start(temp_dir='/tmp/higlass-docker',
                 'viewconf': config
                 }
 
+        ret = container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
+        print('ret:', ret)
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
+        print('ret:', ret.content)
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
         ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
         ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
