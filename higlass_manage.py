@@ -571,9 +571,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                 }
 
         ret = container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
-        print('ret:', ret)
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
-        print('ret:', ret.content)
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
         ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
         ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
