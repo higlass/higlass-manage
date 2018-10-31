@@ -1,3 +1,9 @@
+v0.2.3
+
+- Test improvements
+- Fixed issue related to public datasets remaining visible with the --no-public-data option (#15)
+- Warn users about uninferred filetype and datatype
+
 v0.2.2
 
 - Fixed on-the-fly aggregation for bedpe files (missing directory issue)

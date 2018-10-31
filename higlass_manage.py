@@ -328,6 +328,8 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     (filetype, inferred_datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
 
     if filetype is None or inferred_datatype is None:
+        print("Couldn't infer filetype or datatype ({}, {}),".format(filetype, inferred_datatype),
+              "please specify them using the command line options", file=sys.stderr)
         return
 
     try:
@@ -722,7 +724,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
             if recommended_filetype is not None:
                 print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
             
-            return None
+            return (None, None)
 
     if datatype is None:
         datatype = infer_datatype(filetype)
