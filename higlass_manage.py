@@ -215,8 +215,10 @@ def datatype_to_tracktype(datatype):
         return ('horizontal-chromosome-labels', 'top')
     elif datatype == '2d-rectangle-domains':
         return ('2d-rectangle-domains', 'center')
+    elif datatype == 'bedlike':
+        return ('bedlike', 'top')
 
-    return None
+    return (None, None)
 
 def infer_filetype(filename):
     _,ext = op.splitext(filename)
@@ -379,9 +381,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         datatype = inferred_datatype
 
     if tracktype is None and position is None:
-        try:
-            (tracktype, position) = datatype_to_tracktype(datatype)
-        except ValueError as ve:
+        (tracktype, position) = datatype_to_tracktype(datatype)
+        
+        if tracktype is None:
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
@@ -572,6 +574,7 @@ def _start(temp_dir='/tmp/higlass-docker',
 
         ret = container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
+        print('ret:', ret.content)
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
         ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
         ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
