@@ -118,7 +118,7 @@ higlass-manage stop
 
 The following is a list of handy command then developing HiGlass:
 
-- **Start locally build docker image**:
+- **Start locally built docker image**:
 
    ```
    higlass-manage start --version local
