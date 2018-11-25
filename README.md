@@ -119,7 +119,7 @@ higlass-manage stop
 The following is a list of handy commands when developing HiGlass:
 
 - **Start locally built docker image**:
-
+The locally built image must be named `image-default`. Usually built using [higlass-docker](https://github.com/higlass/higlass-docker/). 
    ```
    higlass-manage start --version local
    ```
