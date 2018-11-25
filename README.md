@@ -116,7 +116,7 @@ higlass-manage stop
 
 ## Development
 
-The following is a list of handy command then developing HiGlass:
+The following is a list of handy commands when developing HiGlass:
 
 - **Start locally built docker image**:
 
