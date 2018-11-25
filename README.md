@@ -114,6 +114,18 @@ To stop a running instance, use the `stop` command:
 higlass-manage stop
 ```
 
+## Development
+
+The following is a list of handy command then developing HiGlass:
+
+- **Start locally build docker image**:
+
+   ```
+   higlass-manage start --version local
+   ```
+
+---
+
 ## License
 
 The code in this repository is provided under the MIT License.
