@@ -118,7 +118,7 @@ def import_linked_file(hg_name, filepath, filetype, datatype, assembly, name, ui
     '''
 
 
-def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload):
+def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
     if not no_upload:
         temp_dir = get_temp_dir(hg_name)
@@ -141,6 +141,7 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     coordSystem = '--coordSystem {}'.format(assembly) if assembly is not None else ''
     name_text = '--name "{}"'.format(name) if name is not None else ''
+    project_name_text = '--project-name "{}"'.format(project_name) if project_name is not None else ''
 
     print('name_text: {}'.format(name_text))
 
@@ -152,13 +153,13 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     if no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' {}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {} --no-upload'.format(
-                    filetype, datatype, name_text, coordSystem))
+                ' --filetype {} --datatype {} {} {} {} --no-upload'.format(
+                    filetype, datatype, name_text, project_name_text, coordSystem))
     else:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' /tmp/{}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {}'.format(
-                    filetype, datatype, name_text, coordSystem))
+                ' --filetype {} --datatype {} {} {} {}'.format(
+                    filetype, datatype, name_text, project_name_text, coordSystem))
 
     if uid is not None:
         command += ' --uid {}'.format(uid)
@@ -752,6 +753,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
 @click.option('--no-upload', default=None, is_flag=True, help="Do not copy the file to the media directory. File must already be in the media directory.")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 @click.option('--has-header', default=False, is_flag=True, help="Does the input file have column header information (only relevant for bed or bedpe files)")
+@click.option('--project-name', default=None, help='Group this tileset with others by specifying a project name')
 def ingest(filename, 
         hg_name, 
         filetype=None, 
@@ -761,7 +763,8 @@ def ingest(filename,
         chromsizes_filename=None, 
         has_header=False, 
         uid=None, 
-        no_upload=None):
+        no_upload=None
+        project_name=None):
     '''
     Ingest a dataset
     '''
@@ -774,7 +777,9 @@ def ingest(filename,
             chromsizes_filename,
             has_header,
             uid,
-            no_upload)
+            no_upload,
+            project_name
+            )
 
 def _ingest(filename, 
         hg_name, 
@@ -785,7 +790,8 @@ def _ingest(filename,
         chromsizes_filename=None, 
         has_header=False, 
         uid=None, 
-        no_upload=None):
+        no_upload=None,
+        project_name=None):
 
     if not no_upload and (not op.exists(filename) and not op.islink(filename)):
         print('File not found:', filename, file=sys.stderr)
@@ -796,7 +802,7 @@ def _ingest(filename,
     with tempfile.TemporaryDirectory() as td:
         (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, td)
 
-        return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload)
+        return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload, project_name)
 
 
 @cli.command()
