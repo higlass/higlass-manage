@@ -763,7 +763,7 @@ def ingest(filename,
         chromsizes_filename=None, 
         has_header=False, 
         uid=None, 
-        no_upload=None
+        no_upload=None,
         project_name=None):
     '''
     Ingest a dataset
