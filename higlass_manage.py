@@ -551,7 +551,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             print("sending request", counter)
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port))
+            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
+                    timeout=2)
             # print("request returned", req.status_code, req.content)
 
             if req.status_code != 200:
@@ -561,6 +562,9 @@ def _start(temp_dir='/tmp/higlass-docker',
                 started = True
         except requests.exceptions.ConnectionError:
             print("Waiting to start (tilesets)...")
+            time.sleep(0.5)
+        except requests.exceptions.ReadTimeout:
+            print("Timeout")
             time.sleep(0.5)
 
     if not public_data:
