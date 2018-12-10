@@ -346,7 +346,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     try:
         MAX_TILESETS=100000
-        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS))
+        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=2)
         
         tilesets = json.loads(req.content)
 
@@ -560,7 +560,7 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             print("sending request", counter)
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port))
+            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), timeout=2)
             # print("request returned", req.status_code, req.content)
 
             if req.status_code != 200:
@@ -570,6 +570,9 @@ def _start(temp_dir='/tmp/higlass-docker',
                 started = True
         except requests.exceptions.ConnectionError:
             print("Waiting to start (tilesets)...")
+            time.sleep(0.5)
+        except requests.exceptions.ReadTimout:
+            print("Request timed out")
             time.sleep(0.5)
 
     if not public_data:
