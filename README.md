@@ -114,6 +114,18 @@ To stop a running instance, use the `stop` command:
 higlass-manage stop
 ```
 
+## Development
+
+The following is a list of handy commands when developing HiGlass:
+
+- **Start locally built docker image**:
+The locally built image must be named `image-default`. Usually built using [higlass-docker](https://github.com/higlass/higlass-docker/). 
+   ```
+   higlass-manage start --version local
+   ```
+
+---
+
 ## License
 
 The code in this repository is provided under the MIT License.
