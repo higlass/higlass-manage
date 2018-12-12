@@ -347,7 +347,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     try:
         MAX_TILESETS=100000
-        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=2)
+        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
         
         tilesets = json.loads(req.content)
 

@@ -1,3 +1,3 @@
+higlass-python>=0.1.1rc4
 clodius>=0.10.0.rc2
-hgflask==0.1.2
 docker
