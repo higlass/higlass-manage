@@ -32,6 +32,9 @@ def md5(fname):
 def hg_name_to_container_name(hg_name):
     return '{}-{}'.format(CONTAINER_PREFIX, hg_name)
 
+class HiGlassNotRunningException(Exception):
+    pass
+
 @click.group()
 def cli():
     pass
@@ -179,9 +182,15 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     return uid
 
 def get_temp_dir(hg_name):
+    print("hi")
     client = docker.from_env()
     container_name = hg_name_to_container_name(hg_name)
     config = client.api.inspect_container(container_name)
+
+    print('state', config['State']['Running'])
+
+    if config['State']['Running'] != True:
+        raise HiGlassNotRunningException()
 
     for mount in config['Mounts']:
         if mount['Destination'] == '/tmp':
@@ -315,6 +324,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     '''
     try:
         temp_dir = get_temp_dir(hg_name)
+        print("temp_dir:", temp_dir)
     except Exception:
         _start(hg_name=hg_name)
 
@@ -337,7 +347,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     try:
         MAX_TILESETS=100000
-        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS))
+        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=2)
         
         tilesets = json.loads(req.content)
 
@@ -376,7 +386,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         # couldn't ingest the file
         return
 
-    import hgflask.client as hgc
+    import higlass.client as hgc
 
     if datatype is None:
         datatype = inferred_datatype
@@ -390,14 +400,14 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     conf = hgc.ViewConf()
     view = conf.add_view()
-    print("tracktype:", tracktype)
+
     track = view.add_track(track_type=tracktype,
-            api_url='http://localhost:{}/api/v1/'.format(port),
+            server='http://localhost:{}/api/v1/'.format(port),
             tileset_uuid=uuid, position=position, 
             height=200)
 
-    conf = json.loads(json.dumps(conf.to_json()))
-    
+    conf = json.loads(json.dumps(conf.to_dict()))
+
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
 
@@ -563,8 +573,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         except requests.exceptions.ConnectionError:
             print("Waiting to start (tilesets)...")
             time.sleep(0.5)
-        except requests.exceptions.ReadTimeout:
-            print("Timeout")
+        except requests.exceptions.ReadTimout:
+            print("Request timed out")
             time.sleep(0.5)
 
     if not public_data:
