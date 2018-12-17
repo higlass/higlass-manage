@@ -182,7 +182,6 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     return uid
 
 def get_temp_dir(hg_name):
-    print("hi")
     client = docker.from_env()
     container_name = hg_name_to_container_name(hg_name)
     config = client.api.inspect_container(container_name)
