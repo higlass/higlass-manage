@@ -413,7 +413,6 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     if public_data:
         conf['trackSourceServers'] += ['http://higlass.io/api/v1/']
 
-
     # uplaod the viewconf
     res = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port),
             json={'viewconf': conf})
@@ -462,6 +461,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
+@click.option('--default-track-options',
+        default=None,
+        help="Specify a json file containing default track options")
 def start(temp_dir,
             data_dir,
             version,
@@ -469,7 +471,8 @@ def start(temp_dir,
             hg_name,
             site_url,
             media_dir,
-            public_data):
+            public_data,
+            default_track_options):
     _start(temp_dir,
             data_dir,
             version,
@@ -477,7 +480,8 @@ def start(temp_dir,
             hg_name,
             site_url,
             media_dir,
-            public_data)
+            public_data,
+            default_track_options)
 
 def _start(temp_dir='/tmp/higlass-docker', 
         data_dir='~/hg-data', 
@@ -486,7 +490,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         hg_name='default', 
         site_url=None,
         media_dir=None, 
-        public_data=True):
+        public_data=True,
+        default_track_options=None):
     '''
     Start a HiGlass instance
     '''
@@ -561,7 +566,7 @@ def _start(temp_dir='/tmp/higlass-docker',
             print("sending request", counter)
             counter += 1
             req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
-                    timeout=2)
+                    timeout=5)
             # print("request returned", req.status_code, req.content)
 
             if req.status_code != 200:
@@ -576,6 +581,7 @@ def _start(temp_dir='/tmp/higlass-docker',
             print("Request timed out")
             time.sleep(0.5)
 
+    print("public_data:", public_data)
     if not public_data:
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']
@@ -590,9 +596,20 @@ def _start(temp_dir='/tmp/higlass-docker',
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
         print('ret:', ret.content)
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
-        ret = container.exec_run('sed -i s/d=default/d=default_local/g higlass-website/assets/scripts/hg-launcher.js')
-        ret = container.exec_run('sed -i s/\"default\"/\"default_local\"/g higlass-website/assets/scripts/hg-launcher.js')
-        ret = container.exec_run('cp higlass-website/app/index.html higlass-website/index.html')
+        ret = container.exec_run("""bash -c 'sed -i '"'"'s/"default"/"default_local"/g'"'"' higlass-app/static/js/main.*.chunk.js'""")
+        print('ret:', ret)
+
+    if default_track_options is not None:
+        with open(default_track_options, 'r') as f:
+            default_options_json = json.load(f)
+            sed_command = """bash -c 'sed -i '"'"'s/assign({{}},this.props.options/assign({{defaultOptions: {} }},this.props.options/g'"'"' """.format(json.dumps(default_options_json))
+            sed_command += " higlass-app/static/js/main.*.chunk.js'"
+            print("sed_command:", sed_command)
+
+            ret = container.exec_run(sed_command)
+
+            print("default_track_options:", json.dumps(default_options_json))
+            print("ret:", ret)
 
     print("Started")
 
