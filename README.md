@@ -63,6 +63,22 @@ higlass-manage start --site-url higlass.io
 
 These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter.
 
+#### Setting default client options
+
+To the default options for newly created tracks, use the `--default-track-options` parameter to pass in a JSON file containing either
+track-specific or general default track options:
+
+```
+$cat default_options.json
+{
+    "all": {
+        "showTooltip": "true"
+    }
+}
+
+$ ./higlass_manage.py start --default-track-options default_options.json
+```
+
 ### Ingesting data
 
 Use the `ingest` command to add new data. Generally data requires a ``filetype`` and a ``datatype``.
