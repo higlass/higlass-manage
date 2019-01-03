@@ -602,14 +602,48 @@ def _start(temp_dir='/tmp/higlass-docker',
     if default_track_options is not None:
         with open(default_track_options, 'r') as f:
             default_options_json = json.load(f)
+            new_hash = slugid.nice()
+
+            sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
+
+            ret = container.exec_run(sed_command)
+            # print("ret:", ret)
+
+
             sed_command = """bash -c 'sed -i '"'"'s/assign({{}},this.props.options/assign({{defaultOptions: {} }},this.props.options/g'"'"' """.format(json.dumps(default_options_json))
             sed_command += " higlass-app/static/js/main.*.chunk.js'"
-            print("sed_command:", sed_command)
+            # print("sed_command:", sed_command)
 
             ret = container.exec_run(sed_command)
 
-            print("default_track_options:", json.dumps(default_options_json))
-            print("ret:", ret)
+            # print("default_track_options:", json.dumps(default_options_json))
+            # print("ret:", ret)
+
+            sed_command = """bash -c 'sed -i '"'"'s/main.*?.chunk.js/main.{}.chunk.js/g'"'"' """.format(new_hash)
+            sed_command += " higlass-app/index.html'"
+
+            ret = container.exec_run(sed_command)
+            # print("ret:", ret)
+
+            sed_command = """bash -c 'sed -i '"'"'s/main.*.chunk.js/main.{}.chunk.js/g'"'"' """.format(new_hash)
+            sed_command += " higlass-app/precache-manifest.*.js'"
+
+            ret = container.exec_run(sed_command)
+            # print("ret:", ret)
+
+            sed_command = """bash -c 'sed -i '"'"'s/index.html/index_invalidated_by_higlass_manage/g'"'"' """.format(new_hash)
+            sed_command += " higlass-app/precache-manifest.*.js'"
+
+            ret = container.exec_run(sed_command)
+            # print("ret:", ret)
+
+            sed_command = """bash -c 'sed -i '"'"'s/main.*.chunk.js/main.{}.chunk.js/g'"'"' """.format(new_hash)
+            sed_command += " higlass-app/asset-manifest.json'"
+
+            ret = container.exec_run(sed_command)
+            # print("ret:", ret)
+            print("Removed default options")
+
 
     print("Started")
 
