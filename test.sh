@@ -6,7 +6,7 @@ end() { echo travis_fold':'end:$1; }
 die() { set +v; echo "$*" 1>&2 ; sleep 1; exit 1; }
 # Race condition truncates logs on Travis: "sleep" might help.
 # https://github.com/travis-ci/travis-ci/issues/6018
-
+VERSION=v0.5.0-rc.7
 
 start get-data
     ./get_test_data.sh
@@ -27,20 +27,20 @@ start ingest
     ./higlass_manage.py view test-hg-media/dixon.mcool
 
     PORT=8123
-    ./higlass_manage.py start --version v0.5.0-rc.6 --port $PORT \
+    ./higlass_manage.py start --version $VERSION --port $PORT \
                                    --hg-name test-hg \
                                    --data-dir $(pwd)/test-hg-data \
                                    --media-dir $(pwd)/test-hg-media
     ./higlass_manage.py ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
-    docker exec higlass-manage-container-default bash -c 'grep -v "showTooltip" higlass-app/static/js/main*.chunk.js | grep function' || die 
+    # docker exec higlass-manage-container-default bash -c 'grep -v "showTooltip" higlass-app/static/js/main*.chunk.js | grep function' || die 
 end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    ./higlass_manage.py start --version v0.5.0-rc.6 --default-track-options data/default_options.json
-    docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
+    ./higlass_manage.py start --version $VERSION --default-track-options data/default_options.json
+    docker exec higlass-manage-container-default bash -c 'grep "HGAC_DEFAULT_OPTIONS" higlass-app/config.js' || die 
 end default-options
 
 start wait
