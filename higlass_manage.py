@@ -583,15 +583,6 @@ def _start(temp_dir='/tmp/higlass-docker',
 
     print("public_data:", public_data)
 
-    if not public_data or default_track_options is not None:
-        # we're going to be changing the higlass js file so first we copy it to a location
-        # with a new hash
-        new_hash = slugid.nice()
-
-        sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
-
-        ret = container.exec_run(sed_command)   
-             
     if not public_data:
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']
@@ -606,18 +597,29 @@ def _start(temp_dir='/tmp/higlass-docker',
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
         print('ret:', ret.content)
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
-        ret = container.exec_run("""bash -c 'sed -i '"'"'s/"default"/"default_local"/g'"'"' higlass-app/static/js/main.*.chunk.js'""".format(new_hash))
-        print('ret:', ret)
+        ret = container.exec_run("""bash -c 'echo "\nwindow.HGAC_DEFAULT_VIEW_CONFIG = '"'"'default_local'"'"';" >> higlass-app/config.js' """)
+        print("ret:", ret)
 
     if default_track_options is not None:
         with open(default_track_options, 'r') as f:
             default_options_json = json.load(f)
 
-            sed_command = """bash -c 'sed -i '"'"'s/assign({{}},this.props.options/assign({{defaultOptions: {} }},this.props.options/g'"'"' """.format(json.dumps(default_options_json))
-            sed_command += " higlass-app/static/js/main.*.chunk.js'"
-            # print("sed_command:", sed_command)
+            ret = container.exec_run("""bash -c 'echo '"'"'\nwindow.HGAC_DEFAULT_OPTIONS = {};'"'"' >> higlass-app/config.js' """.format(json.dumps(default_options_json)))
+            print("ret:", ret)
 
-            ret = container.exec_run(sed_command)
+    '''
+    if not public_data or default_track_options is not None:
+        # we're going to be changing the higlass js file so first we copy it to a location
+        # with a new hash
+        new_hash = slugid.nice()
+
+        sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
+
+        ret = container.exec_run(sed_command)   
+             
+
+
+
 
     # print("ret:", ret)
 
@@ -633,6 +635,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     ret = container.exec_run(sed_command)
     # print("ret:", ret)
     print("Replaced js file")
+    '''
 
 
     print("Started")
