@@ -12,6 +12,8 @@ start get-data
     ./get_test_data.sh
 end get-data
 
+HIGLASS_DOCKER_VERSION=v0.6.1;
+
 
 start ingest
     [ -e test-hg-data ] && rm -rf test-hg-data
@@ -27,7 +29,7 @@ start ingest
     ./higlass_manage.py view test-hg-media/dixon.mcool
 
     PORT=8123
-    ./higlass_manage.py start --version v0.5.0-rc.6 --port $PORT \
+    ./higlass_manage.py start --version $HIGLASS_DOCKER_VERSION --port $PORT \
                                    --hg-name test-hg \
                                    --data-dir $(pwd)/test-hg-data \
                                    --media-dir $(pwd)/test-hg-media
@@ -39,7 +41,7 @@ end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    ./higlass_manage.py start --version v0.5.0-rc.6 --default-track-options data/default_options.json
+    ./higlass_manage.py start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
     docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
 end default-options
 

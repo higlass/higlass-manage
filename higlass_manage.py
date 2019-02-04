@@ -518,7 +518,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     else:
         sys.stdout.write("Pulling latest image... ")
         sys.stdout.flush()
-        image = client.images.pull('gehlenborglab/higlass', version)
+        image = client.images.pull('higlass/higlass-docker', version)
         sys.stdout.write("done")
         sys.stdout.flush()
 
@@ -705,7 +705,7 @@ def list_data(hg_name):
 
     j = json.loads(ret.content.decode('utf8'))
     for result in j['results']:
-        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['name']]))
+        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']]))
 
 @cli.command()
 @click.argument('names', nargs=-1)
