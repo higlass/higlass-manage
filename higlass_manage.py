@@ -705,7 +705,7 @@ def list_data(hg_name):
 
     j = json.loads(ret.content.decode('utf8'))
     for result in j['results']:
-        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['name']]))
+        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']]))
 
 @cli.command()
 @click.argument('names', nargs=-1)
