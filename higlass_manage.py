@@ -518,7 +518,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     else:
         sys.stdout.write("Pulling latest image... ")
         sys.stdout.flush()
-        image = client.images.pull('gehlenborglab/higlass', version)
+        image = client.images.pull('higlass/higlass-docker', version)
         sys.stdout.write("done")
         sys.stdout.flush()
 
