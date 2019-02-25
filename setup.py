@@ -10,7 +10,7 @@ setup(
     py_modules=['higlass_manage'],
     install_requires=[
         'Click',
-        'clodius==0.9.0',
+        'clodius>=0.10.3',
         'cooler>=0.7.10',
         'pandas>=0.19',
         'docker',
@@ -18,6 +18,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        higlass-manage=higlass_manage:cli
+        higlass-manage=cli:cli
     ''',
 )
