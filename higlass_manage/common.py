@@ -124,6 +124,8 @@ def infer_datatype(filetype):
         return 'time-interval'
     if filetype == 'hitile':
         return 'vector'
+    if filetype == 'beddb':
+        return 'bedlike'
 
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
