@@ -26,14 +26,14 @@ start ingest
     cp data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool \
        test-hg-media/dixon.mcool
 
-    ./higlass_manage.py view test-hg-media/dixon.mcool
+    higlass-manage view test-hg-media/dixon.mcool
 
     PORT=8123
-    ./higlass_manage.py start --version $HIGLASS_DOCKER_VERSION --port $PORT \
+    higlass-manage start --version $HIGLASS_DOCKER_VERSION --port $PORT \
                                    --hg-name test-hg \
                                    --data-dir $(pwd)/test-hg-data \
                                    --media-dir $(pwd)/test-hg-media
-    ./higlass_manage.py ingest --hg-name test-hg \
+    higlass-manage ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
     docker exec higlass-manage-container-default bash -c 'grep -v "showTooltip" higlass-app/static/js/main*.chunk.js | grep function' || die 
@@ -41,7 +41,7 @@ end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    ./higlass_manage.py start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
+    higlass-manage.py start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
     docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
 end default-options
 
@@ -56,7 +56,7 @@ end wait
 
 
 start cleanup
-    ./higlass_manage.py stop test-hg
+    higlass-manage stop test-hg
 end cleanup
 
 echo 'Passed all tests'
