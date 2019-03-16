@@ -1,6 +1,8 @@
 import click
 import docker
 
+from .common import CONTAINER_PREFIX
+
 @click.command()
 @click.argument('names', nargs=-1)
 def stop(names):
