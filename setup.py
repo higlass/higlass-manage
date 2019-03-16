@@ -8,6 +8,7 @@ setup(
     description='Wrappers for running the HiGlass Docker container',
     version='0.5.0',
     py_modules=['higlass_manage'],
+    packages=['higlass_manage'],
     install_requires=[
         'Click',
         'clodius>=0.10.3',
