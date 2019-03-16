@@ -18,6 +18,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        higlass-manage=cli:cli
+        higlass-manage=higlass_manage.cli:cli
     ''',
 )
