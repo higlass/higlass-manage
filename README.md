@@ -34,7 +34,7 @@ To run the tests, first get the test data:
 And then run the tests:
 
 ```
-python test.py
+./test.sh
 ```
 
 ### Quickly viewing a dataset
@@ -100,7 +100,7 @@ either the `--assembly` or `--chromsizes-filename` parameters.
 ### Listing available datasets
 
 ```
-pete@twok:~/projects/higlass-manage$ higlass-manage list_data
+pete@twok:~/projects/higlass-manage$ higlass-manage list tilesets
 VlWKy6ofT6qMFGf-uG_5pQ | beddb | bedlike | GSE93955_CHIP_DMC1_B6_peaks.bed.multires
 LAXFhHhASa2zDgJRRS67cw | cooler | matrix | H3K27me3_HiChIP_1.multi.cool
 ```

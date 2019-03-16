@@ -1,4 +1,5 @@
-clodius>=0.10.0.rc4
+clodius>=0.10.3
 higlass-python>=0.1.1
 docker
 ipywidgets
+slugid==2.0.0
