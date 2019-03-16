@@ -12,7 +12,7 @@ start get-data
     ./get_test_data.sh
 end get-data
 
-HIGLASS_DOCKER_VERSION=v0.6.1;
+HIGLASS_DOCKER_VERSION=v0.6.9;
 
 
 start ingest
@@ -41,7 +41,7 @@ end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    higlass-manage.py start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
+    higlass-manage start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
     docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
 end default-options
 

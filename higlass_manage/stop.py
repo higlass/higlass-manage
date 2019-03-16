@@ -1,4 +1,5 @@
 import click
+import docker
 
 @click.command()
 @click.argument('names', nargs=-1)

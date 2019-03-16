@@ -1,8 +1,10 @@
 import click
 import docker
+import json
 import os
 import os.path as op
 import requests
+import slugid
 import sys
 import time
 
