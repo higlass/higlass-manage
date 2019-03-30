@@ -1,3 +1,4 @@
+import sys
 import click
 import clodius.cli.aggregate as cca
 import ntpath
