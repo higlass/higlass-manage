@@ -19,6 +19,12 @@ start ingest
     [ -e test-hg-data ] && rm -rf test-hg-data
     [ -e test-hg-media ] && rm -rf test-hg-media
 
+    # ingest a bedfile; useful for testing the aggregate
+    # function that gets called first
+    higlass-manage ingest --filetype bedfile \
+        --datatype bedlike --assembly hg19\
+        data/ctcf_known1_100.bed
+
     # directories that will store data and media
     mkdir test-hg-data
     mkdir test-hg-media

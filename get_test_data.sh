@@ -5,6 +5,7 @@ mkdir -p data
 
 FILES=$(cat <<END
 Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool
+ctcf_known1_100.bed
 END
 )
 

@@ -1,9 +1,14 @@
 import click
+import clodius.cli.aggregate as cca
+import ntpath
 import os.path as op
+import sys
 import tempfile
 
 from higlass_manage.common import fill_filetype_and_datatype
 from higlass_manage.common import import_file
+from higlass_manage.common import get_temp_dir
+from higlass_manage.start import _start
 
 @click.command()
 @click.argument('filename')
@@ -57,6 +62,12 @@ def _ingest(filename,
         no_upload=None,
         project_name=None):
 
+    try:
+        get_temp_dir(hg_name)
+    except Exception:
+        print("HiGlass not running. Starting...")
+        _start(hg_name=hg_name)
+
     if not no_upload and (not op.exists(filename) and not op.islink(filename)):
         print('File not found:', filename, file=sys.stderr)
         return None
@@ -77,7 +88,7 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
             print('An assembly or set of chromosome sizes is required when importing bed files. Please specify one or the other using the --assembly or --chromsizes-filename parameters', file=sys.stderr)
             return
 
-        output_file = op.join(tmp_dir, filename + '.beddb')
+        output_file = op.join(tmp_dir, ntpath.basename(filename) + '.beddb')
 
         print("Aggregating bedfile")
         cca._bedfile(filename,
@@ -106,7 +117,7 @@ def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header
 
         output_file = op.join(tmp_dir, filename + '.bed2ddb')
 
-        print("Aggregating bedpe")
+        print("Aggregating bedpe (output_file: {}".format(output_file))
         cca._bedpe(filename,
                 output_file,
                 assembly,
