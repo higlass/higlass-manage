@@ -3,7 +3,6 @@ import clodius.cli.aggregate as cca
 import ntpath
 import os.path as op
 import sys
-import tempfile
 
 from higlass_manage.common import fill_filetype_and_datatype
 from higlass_manage.common import import_file
@@ -74,10 +73,11 @@ def _ingest(filename,
 
     # guess filetype and datatype if they're None
     (filetype, datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
-    with tempfile.TemporaryDirectory() as td:
-        (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, td)
+    
+    temp_dir = get_temp_dir(hg_name)
+    (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, temp_dir)
 
-        return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload, project_name)
+    return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload, project_name)
 
 def aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, tmp_dir):
     if filetype == 'bedfile':
