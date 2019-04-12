@@ -61,7 +61,7 @@ If you want to make your instance accessible to the outside world, you need to s
 higlass-manage start --site-url higlass.io
 ```
 
-These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter.
+These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter. The number of worker processes for the uWSGI application server can be specified with the ``--workers`` parameter. 
 
 #### Setting default client options
 
