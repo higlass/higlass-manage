@@ -45,6 +45,9 @@ from higlass_manage.common import CONTAINER_PREFIX
 @click.option('--default-track-options',
         default=None,
         help="Specify a json file containing default track options")
+@click.option('--workers',
+        default=None,
+        help="Specify a custom number of workers for the uWSGI application server")
 def start(temp_dir,
             data_dir,
             version,
@@ -53,7 +56,8 @@ def start(temp_dir,
             site_url,
             media_dir,
             public_data,
-            default_track_options):
+            default_track_options,
+            workers):
     _start(temp_dir,
             data_dir,
             version,
@@ -62,7 +66,8 @@ def start(temp_dir,
             site_url,
             media_dir,
             public_data,
-            default_track_options)
+            default_track_options,
+            workers)
 
 def _start(temp_dir='/tmp/higlass-docker', 
         data_dir='~/hg-data', 
@@ -72,7 +77,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         site_url=None,
         media_dir=None, 
         public_data=True,
-        default_track_options=None):
+        default_track_options=None,
+        workers=None):
     '''
     Start a HiGlass instance
     '''
@@ -115,6 +121,9 @@ def _start(temp_dir='/tmp/higlass-docker',
 
     if site_url is not None:
         environment['SITE_URL'] = site_url
+
+    if workers is not None:
+        environment['WORKERS'] = workers
 
     print('Data directory:', data_dir)
     print('Temp directory:', temp_dir)
