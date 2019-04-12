@@ -102,14 +102,14 @@ def _start(temp_dir='/tmp/higlass-docker',
     try:
         hg_container = client.containers.get(hg_container_name)
 
-        print('Stopping previously running container')
+        sys.stderr.write('Stopping previously running container\n')
         hg_container.stop()
         hg_container.remove()
     except docker.errors.NotFound:
         # container isn't running so no need to stop it
         pass
     except requests.exceptions.ConnectionError:
-        print('Error connecting to the Docker daemon, make sure it is started and you are logged in.')
+        sys.stderr.write('Error connecting to the Docker daemon, make sure it is started and you are logged in.\n')
         return
 
     if use_redis:
@@ -192,11 +192,11 @@ def _start(temp_dir='/tmp/higlass-docker',
     if version == 'local':
         hg_image = client.images.get('image-default')
     else:
-        sys.stdout.write("Pulling latest image... ")
-        sys.stdout.flush()
+        sys.stderr.write("Pulling latest image... \n")
+        sys.stderr.flush()
         hg_image = client.images.pull('higlass/higlass-docker', version)
-        sys.stdout.write("done\n")
-        sys.stdout.flush()
+        sys.stderr.write("done\n")
+        sys.stderr.flush()
 
     data_dir = op.expanduser(data_dir)
     temp_dir = op.expanduser(temp_dir)
@@ -214,12 +214,12 @@ def _start(temp_dir='/tmp/higlass-docker',
     if workers is not None:
         hg_environment['WORKERS'] = workers
 
-    print('Data directory:', data_dir)
-    print('Temp directory:', temp_dir)
+    sys.stderr.write('Data directory: {}\n'.format(data_dir))
+    sys.stderr.write('Temp directory: ()\n'.format(temp_dir))
 
     hg_version_addition = '' if version is None else ':{}'.format(version)
 
-    print('Starting...', hg_name, port)
+    sys.stderr.write('Starting... {} {}'.format(hg_name, port))
     hg_volumes={
         temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
         data_dir : { 'bind' : '/data', 'mode' : 'rw' }
@@ -250,31 +250,31 @@ def _start(temp_dir='/tmp/higlass-docker',
                                              publish_all_ports=True,
                                              detach=True)
         
-    print('Docker started: {}'.format(hg_container_name))
+    sys.stderr.write('Docker started: {}\n'.format(hg_container_name))
 
     started = False
     counter = 1
     while not started:
         try:
-            print("sending request", counter)
+            sys.stderr.write("sending request {}".format(counter))
             counter += 1
             req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
                     timeout=5)
-            # print("request returned", req.status_code, req.content)
+            # sys.stderr.write("request returned {} {}\n".format(req.status_code, req.content))
 
             if req.status_code != 200:
-                print("Non 200 status code returned ({}), waiting...".format(req.status_code))
+                sys.stderr.write("Non 200 status code returned ({}), waiting...\n".format(req.status_code))
                 time.sleep(0.5)
             else:
                 started = True
         except requests.exceptions.ConnectionError:
-            print("Waiting to start (tilesets)...")
+            sys.stderr.write("Waiting to start (tilesets)...\n")
             time.sleep(0.5)
         except requests.exceptions.ReadTimout:
-            print("Request timed out")
+            sys.stderr.write("Request timed out\n")
             time.sleep(0.5)
 
-    print("public_data:", public_data)
+    sys.stderr.write("public_data: {}".format(public_data))
 
     if not public_data or default_track_options is not None:
         # we're going to be changing the higlass js file so first we copy it to a location
@@ -289,7 +289,7 @@ def _start(temp_dir='/tmp/higlass-docker',
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']
         started = True
-        # print('config', json.dumps(config, indent=2))
+        # sys.stderr.write('config {}\n'.format(json.dumps(config, indent=2)))
         config = {
                 'uid': 'default_local',
                 'viewconf': config
@@ -297,10 +297,10 @@ def _start(temp_dir='/tmp/higlass-docker',
 
         ret = hg_container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
         ret = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port), json=config)
-        print('ret:', ret.content)
+        sys.stderr.write('ret: {}\n'.format(ret.content))
         # ret = container.exec_run('echo "import tilesets.models as tm; tm.ViewConf.get(uuid={}default{}).delete()" | python higlass-server/manage.py shell'.format("'", "'"), tty=True)
         ret = hg_container.exec_run("""bash -c 'sed -i '"'"'s/"default"/"default_local"/g'"'"' higlass-app/static/js/main.*.chunk.js'""".format(new_hash))
-        print('ret:', ret)
+        sys.stderr.write('ret: {}\n'.format(ret))
 
     if default_track_options is not None:
         with open(default_track_options, 'r') as f:
@@ -308,24 +308,24 @@ def _start(temp_dir='/tmp/higlass-docker',
 
             sed_command = """bash -c 'sed -i '"'"'s/assign({{}},this.props.options/assign({{defaultOptions: {} }},this.props.options/g'"'"' """.format(json.dumps(default_options_json))
             sed_command += " higlass-app/static/js/main.*.chunk.js'"
-            # print("sed_command:", sed_command)
+            # sys.stderr.write("sed_command: {}\n".format(sed_command))
 
             ret = hg_container.exec_run(sed_command)
 
-    # print("ret:", ret)
+    # sys.stderr.write("ret: {}\n".format(ret))
 
     sed_command = """bash -c 'sed -i '"'"'s/main.*.chunk.js/main.invalid.chunk.js/g'"'"' """
     sed_command += " higlass-app/precache-manifest.*.js'"
 
     ret = hg_container.exec_run(sed_command)
-    # print("ret:", ret)
+    # sys.stderr.write("ret: {}\n".format(ret))
 
     sed_command = """bash -c 'sed -i '"'"'s/index.html/index_invalidated_by_higlass_manage/g'"'"' """
     sed_command += " higlass-app/precache-manifest.*.js'"
 
     ret = hg_container.exec_run(sed_command)
-    # print("ret:", ret)
-    print("Replaced js file")
+    # sys.stderr.write("ret: {}\n".format(ret))
+    sys.stderr.write("Replaced js file\n")
 
 
-    print("Started")
+    sys.stderr.write("Started\n")

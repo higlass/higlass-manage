@@ -1,3 +1,4 @@
+import sys
 import click
 import docker
 
@@ -21,7 +22,7 @@ def stop(names):
             client.containers.get(hm_name).stop()
             client.containers.get(hm_name).remove()
         except docker.errors.NotFound as ex:
-            print("Instance not running: {}".format(name))
+            sys.stderr.write("Instance not running: {}".format(name))
             
         # redis container
         redis_name = '{}-{}'.format(REDIS_PREFIX, name)
