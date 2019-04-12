@@ -9,6 +9,8 @@ setup(
     version='0.6.1',
     py_modules=['higlass_manage'],
     packages=['higlass_manage'],
+    package_data={'': ['redis/*']},
+    include_package_data=True,
     install_requires=[
         'Click',
         'clodius>=0.10.3',

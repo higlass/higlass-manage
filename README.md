@@ -61,7 +61,15 @@ If you want to make your instance accessible to the outside world, you need to s
 higlass-manage start --site-url higlass.io
 ```
 
-These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter. The number of worker processes for the uWSGI application server can be specified with the ``--workers`` parameter. 
+These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter. The number of worker processes for the uWSGI application server can be specified with the ``--workers`` parameter.
+
+#### Using the Redis caching service
+
+To make use of the Redis caching service to improve performance, add the `--use-redis` flag. Redis files will be stored by default in the `~/redis-data` directory. Add the `--redis-dir` parameter to override this default.
+
+```
+higlass-manage start ... --use-redis --redis-dir /new/path/to/redis-data
+```
 
 #### Setting default client options
 

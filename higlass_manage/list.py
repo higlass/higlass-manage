@@ -4,7 +4,7 @@ import json
 import requests
 
 from higlass_manage.common import get_port
-from higlass_manage.common import CONTAINER_PREFIX
+from higlass_manage.common import CONTAINER_PREFIX, REDIS_PREFIX
 
 @click.command()
 @click.option('--hg-name', default='default', 
@@ -42,3 +42,8 @@ def instances():
             directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in  config['Mounts']])
             port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
             print(hm_name, "{} {}".format(directories, port))
+        if name.find(REDIS_PREFIX) == 0:
+            redis_name = name[len(REDIS_PREFIX)+1:]
+            redis_config = client.api.inspect_container(container.name)
+            redis_directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in redis_config['Mounts']])
+            print(redis_name, "{}".format(redis_directories))
