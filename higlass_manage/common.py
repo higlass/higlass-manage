@@ -8,9 +8,7 @@ import sys
 CONTAINER_PREFIX = 'higlass-manage-container'
 NETWORK_PREFIX = 'higlass-manage-network'
 REDIS_PREFIX = 'higlass-manage-redis'
-REDIS_IMAGE = 'redis:5.0.3-alpine'
 REDIS_CONF = '/usr/local/etc/redis/redis.conf'
-REDIS_PORT = 6379
 
 def md5(fname):
     hash_md5 = hashlib.md5()

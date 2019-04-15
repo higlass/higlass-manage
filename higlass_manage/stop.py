@@ -22,7 +22,7 @@ def stop(names):
             client.containers.get(hm_name).stop()
             client.containers.get(hm_name).remove()
         except docker.errors.NotFound as ex:
-            sys.stderr.write("Instance not running: {}".format(name))
+            sys.stderr.write("Instance not running: {}\n".format(name))
             
         # redis container
         redis_name = '{}-{}'.format(REDIS_PREFIX, name)
@@ -30,7 +30,7 @@ def stop(names):
             client.containers.get(redis_name).stop()
             client.containers.get(redis_name).remove()
         except docker.errors.NotFound:
-            sys.stderr.write("No Redis instances found at {}; skipping...".format(redis_name))
+            sys.stderr.write("No Redis instances found at {}; skipping...\n".format(redis_name))
             
         # bridge network
         network_name = '{}-{}'.format(NETWORK_PREFIX, name)
@@ -40,5 +40,5 @@ def stop(names):
                 network = client.networks.get(network_name)
                 network.remove()
         except docker.errors.NotFound:
-            sys.stderr.write("No bridge network found at {}; skipping...".format(network_name))
+            sys.stderr.write("No bridge network found at {}; skipping...\n".format(network_name))
         

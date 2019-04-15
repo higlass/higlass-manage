@@ -8,7 +8,7 @@ import slugid
 import sys
 import time
 
-from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX, REDIS_IMAGE, REDIS_CONF, REDIS_PORT
+from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX, REDIS_CONF
 
 @click.command()
 @click.option('-t', '--temp-dir',
@@ -55,6 +55,22 @@ from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX
               default='~/redis-data',
               help='Use a specific directory for Redis files',
               type=str)
+@click.option('--hg-repository',
+              default='higlass/higlass-docker',
+              help='The Docker repository to use for the HiGlass image',
+              type=str)
+@click.option('--redis-repository',
+              default='redis',
+              help='The Docker repository to use for the Redis image',
+              type=str)
+@click.option('--redis-tag',
+              default='5.0.3-alpine',
+              help='The Docker tag to use for the Redis image repository',
+              type=str)
+@click.option('--redis-port',
+              default=6379,
+              help='The port to use for the Redis image',
+              type=int)
 def start(temp_dir,
           data_dir,
           version,
@@ -66,7 +82,11 @@ def start(temp_dir,
           default_track_options,
           workers,
           use_redis,
-          redis_dir):
+          redis_dir,
+          hg_repository,
+          redis_repository,
+          redis_tag,
+          redis_port):
     _start(temp_dir,
            data_dir,
            version,
@@ -78,8 +98,11 @@ def start(temp_dir,
            default_track_options,
            workers,
            use_redis,
-           redis_dir)
-
+           redis_dir,
+           hg_repository,
+           redis_repository,
+           redis_tag,
+           redis_port)
 def _start(temp_dir='/tmp/higlass-docker', 
            data_dir='~/hg-data', 
            version='latest', 
@@ -91,7 +114,11 @@ def _start(temp_dir='/tmp/higlass-docker',
            default_track_options=None,
            workers=None,
            use_redis=False,
-           redis_dir='~/redis-data'):
+           redis_dir='~/redis-data',
+           hg_repository='higlass/higlass-docker',
+           redis_repository='redis',
+           redis_tag='5.0.3-alpine',
+           redis_port=6379):
     '''
     Start a HiGlass instance
     '''
@@ -130,8 +157,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             # https://docker-py.readthedocs.io/en/stable/networks.html
             network = client.networks.create(network_name, driver="bridge")
-        except docker.errors.APIError:
-            sys.stderr.write("Error: Could not access Docker network.\n")
+        except docker.errors.APIError as err:
+            sys.stderr.write("Error: Could not access Docker network ({}).\n".format(err))
             sys.exit(-1)
 
         # clear up any running Redis container
@@ -147,9 +174,9 @@ def _start(temp_dir='/tmp/higlass-docker',
             sys.exit(-1)
 
         # pull Redis image
-        sys.stderr.write("Pulling {}\n".format(REDIS_IMAGE))
+        sys.stderr.write("Pulling {}:{}\n".format(redis_repository, redis_tag))
         sys.stderr.flush()
-        redis_image = client.images.pull(REDIS_IMAGE)
+        redis_image = client.images.pull(redis_repository, tag=redis_tag)
         sys.stderr.write("done\n")
         sys.stderr.flush()
 
@@ -194,7 +221,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     else:
         sys.stderr.write("Pulling latest image... \n")
         sys.stderr.flush()
-        hg_image = client.images.pull('higlass/higlass-docker', version)
+        hg_image = client.images.pull(hg_repository, version)
         sys.stderr.write("done\n")
         sys.stderr.flush()
 
@@ -219,7 +246,7 @@ def _start(temp_dir='/tmp/higlass-docker',
 
     hg_version_addition = '' if version is None else ':{}'.format(version)
 
-    sys.stderr.write('Starting... {} {}'.format(hg_name, port))
+    sys.stderr.write('Starting... {} {}\n'.format(hg_name, port))
     hg_volumes={
         temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
         data_dir : { 'bind' : '/data', 'mode' : 'rw' }
@@ -239,7 +266,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     else:
         # add some environment variables to the higlass container
         hg_environment['REDIS_HOST'] = redis_name
-        hg_environment['REDIS_PORT'] = REDIS_PORT
+        hg_environment['REDIS_PORT'] = redis_port
         # run the higlass container on the shared network with the Redis container
         hg_container = client.containers.run(hg_image,
                                              network=network_name,
@@ -256,7 +283,7 @@ def _start(temp_dir='/tmp/higlass-docker',
     counter = 1
     while not started:
         try:
-            sys.stderr.write("sending request {}".format(counter))
+            sys.stderr.write("sending request {}\n".format(counter))
             counter += 1
             req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
                     timeout=5)
@@ -274,7 +301,7 @@ def _start(temp_dir='/tmp/higlass-docker',
             sys.stderr.write("Request timed out\n")
             time.sleep(0.5)
 
-    sys.stderr.write("public_data: {}".format(public_data))
+    sys.stderr.write("public_data: {}\n".format(public_data))
 
     if not public_data or default_track_options is not None:
         # we're going to be changing the higlass js file so first we copy it to a location
