@@ -60,6 +60,28 @@ start wait
         || die
 end wait
 
+start cleanup
+    higlass-manage stop test-hg
+end cleanup
+
+start redis
+    [ -e test-hg-data ] && rm -rf test-hg-data
+    [ -e test-hg-media ] && rm -rf test-hg-media
+    [ -e test-redis ] && rm -rf test-redis
+
+    mkdir test-hg-data
+    mkdir test-hg-media
+    mkdir test-redis
+
+    higlass-manage start --version $HIGLASS_DOCKER_VERSION \
+		   --hg-name test-hg \
+		   --data-dir $(pwd)/test-hg-data \
+		   --media-dir $(pwd)/test-hg-media \
+		   --redis-dir $(pwd)/test-redis \
+		   --use-redis
+
+    docker exec -i higlass-manage-redis-default 'redis-cli' < <(echo ping) || die
+end redis
 
 start cleanup
     higlass-manage stop test-hg
