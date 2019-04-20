@@ -26,7 +26,7 @@ def tilesets(hg_name):
 
     j = json.loads(ret.content.decode('utf8'))
     for result in j['results']:
-        sys.stderr.write("{}\n".format(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']])))
+        sys.stdout.write("{}\n".format(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']])))
 
 @click.command()
 def instances():
@@ -42,10 +42,10 @@ def instances():
             config = client.api.inspect_container(container.name)
             directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in  config['Mounts']])
             port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
-            sys.stderr.write("higlass\t{}\t{}\t{}\n".format(hm_name, directories, port))
+            sys.stdout.write("higlass\t{}\t{}\t{}\n".format(hm_name, directories, port))
         if name.find(REDIS_PREFIX) == 0:
             redis_name = name[len(REDIS_PREFIX)+1:]
             redis_config = client.api.inspect_container(container.name)
             redis_directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in redis_config['Mounts']])
-            sys.stderr.write("redis\t{}\t{}\t.\n".format(redis_name, redis_directories))
+            sys.stdout.write("redis\t{}\t{}\t.\n".format(redis_name, redis_directories))
 
