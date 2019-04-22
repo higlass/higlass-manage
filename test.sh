@@ -16,8 +16,8 @@ HIGLASS_DOCKER_VERSION=v0.6.9;
 
 
 start ingest
-    [ -e test-hg-data ] && rm -rf test-hg-data
-    [ -e test-hg-media ] && rm -rf test-hg-media
+    [ -e $(PWD)/test-hg-data ] && rm -rf $(PWD)/test-hg-data
+    [ -e $(PWD)/test-hg-media ] && rm -rf $(PWD)/test-hg-media
 
     # ingest a bedfile; useful for testing the aggregate
     # function that gets called first
@@ -26,19 +26,19 @@ start ingest
         data/ctcf_known1_100.bed
 
     # directories that will store data and media
-    mkdir test-hg-data
-    mkdir test-hg-media
+    mkdir $(PWD)/test-hg-data
+    mkdir $(PWD)/test-hg-media
 
     cp data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool \
-       test-hg-media/dixon.mcool
+       $(PWD)/test-hg-media/dixon.mcool
 
-    higlass-manage view test-hg-media/dixon.mcool
+    higlass-manage view $(PWD)/test-hg-media/dixon.mcool
 
     PORT=8123
     higlass-manage start --version $HIGLASS_DOCKER_VERSION --port $PORT \
                                    --hg-name test-hg \
-                                   --data-dir $(pwd)/test-hg-data \
-                                   --media-dir $(pwd)/test-hg-media
+                                   --data-dir $(PWD)/test-hg-data \
+                                   --media-dir $(PWD)/test-hg-media
     higlass-manage ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
@@ -65,9 +65,9 @@ start cleanup
 end cleanup
 
 start redis
-    [ -e test-hg-data ] && rm -rf test-hg-data
-    [ -e test-hg-media ] && rm -rf test-hg-media
-    [ -e test-redis ] && rm -rf test-redis
+    [ -e $(PWD)/test-hg-data ] && rm -rf $(PWD)/test-hg-data
+    [ -e $(PWD)/test-hg-media ] && rm -rf $(PWD)/test-hg-media
+    [ -e $(PWD)/test-redis ] && rm -rf $(PWD)/test-redis
 
     mkdir test-hg-data
     mkdir test-hg-media
@@ -75,9 +75,9 @@ start redis
 
     higlass-manage start --version $HIGLASS_DOCKER_VERSION \
 		   --hg-name test-hg \
-		   --data-dir $(pwd)/test-hg-data \
-		   --media-dir $(pwd)/test-hg-media \
-		   --redis-dir $(pwd)/test-redis \
+		   --data-dir $(PWD)/test-hg-data \
+		   --media-dir $(PWD)/test-hg-media \
+		   --redis-dir $(PWD)/test-redis \
 		   --use-redis
 
     docker exec -i higlass-manage-redis-default 'redis-cli' < <(echo ping) || die
