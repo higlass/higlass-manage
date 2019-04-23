@@ -71,18 +71,14 @@ start cleanup
 end cleanup
 
 start redis
-    [ -e ${TMPDIR}/test-hg-data ] && rm -rf ${TMPDIR}/test-hg-data
-    [ -e ${TMPDIR}/test-hg-media ] && rm -rf ${TMPDIR}/test-hg-media
-    [ -e ${TMPDIR}/test-redis ] && rm -rf ${TMPDIR}/test-redis
-
-    mkdir ${TMPDIR}/test-hg-data
-    mkdir ${TMPDIR}/test-hg-media
+    mkdir ${TMPDIR}/test-hg-data-with-redis
+    mkdir ${TMPDIR}/test-hg-media-with-redis
     mkdir ${TMPDIR}/test-redis
 
     higlass-manage start --version $HIGLASS_DOCKER_VERSION \
-		   --hg-name test-hg \
-		   --data-dir ${TMPDIR}/test-hg-data \
-		   --media-dir ${TMPDIR}/test-hg-media \
+		   --hg-name test-hg-with-redis \
+		   --data-dir ${TMPDIR}/test-hg-data-with-redis \
+		   --media-dir ${TMPDIR}/test-hg-media-with-redis \
 		   --redis-dir ${TMPDIR}/test-redis \
 		   --use-redis
 
@@ -90,7 +86,7 @@ start redis
 end redis
 
 start cleanup
-    higlass-manage stop test-hg
+    higlass-manage stop test-hg-with-redis
 end cleanup
 
 echo 'Passed all tests'
