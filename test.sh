@@ -7,6 +7,12 @@ die() { set +v; echo "$*" 1>&2 ; sleep 1; exit 1; }
 # Race condition truncates logs on Travis: "sleep" might help.
 # https://github.com/travis-ci/travis-ci/issues/6018
 
+# Create temporary work directory
+TMPDIR=$(mktemp -d)
+
+# Make sure it gets removed even if the script exits abnormally
+trap "exit 1"           HUP INT PIPE QUIT TERM
+trap 'rm -rf "$TMPDIR"' EXIT
 
 start get-data
     ./get_test_data.sh
@@ -16,8 +22,8 @@ HIGLASS_DOCKER_VERSION=v0.6.9;
 
 
 start ingest
-    [ -e $(PWD)/test-hg-data ] && rm -rf $(PWD)/test-hg-data
-    [ -e $(PWD)/test-hg-media ] && rm -rf $(PWD)/test-hg-media
+    [ -e ${TMPDIR}/test-hg-data ] && rm -rf ${TMPDIR}/test-hg-data
+    [ -e ${TMPDIR}/test-hg-media ] && rm -rf ${TMPDIR}/test-hg-media
 
     # ingest a bedfile; useful for testing the aggregate
     # function that gets called first
@@ -26,19 +32,19 @@ start ingest
         data/ctcf_known1_100.bed
 
     # directories that will store data and media
-    mkdir $(PWD)/test-hg-data
-    mkdir $(PWD)/test-hg-media
+    mkdir ${TMPDIR}/test-hg-data
+    mkdir ${TMPDIR}/test-hg-media
 
     cp data/Dixon2012-J1-NcoI-R1-filtered.100kb.multires.cool \
-       $(PWD)/test-hg-media/dixon.mcool
+       ${TMPDIR}/test-hg-media/dixon.mcool
 
-    higlass-manage view $(PWD)/test-hg-media/dixon.mcool
+    higlass-manage view ${TMPDIR}/test-hg-media/dixon.mcool
 
     PORT=8123
-    higlass-manage start --version $HIGLASS_DOCKER_VERSION --port $PORT \
+    higlass-manage start --version ${HIGLASS_DOCKER_VERSION} --port ${PORT} \
                                    --hg-name test-hg \
-                                   --data-dir $(PWD)/test-hg-data \
-                                   --media-dir $(PWD)/test-hg-media
+                                   --data-dir ${TMPDIR}/test-hg-data \
+                                   --media-dir ${TMPDIR}/test-hg-media
     higlass-manage ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
@@ -47,16 +53,16 @@ end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    higlass-manage start --version $HIGLASS_DOCKER_VERSION --default-track-options data/default_options.json
+    higlass-manage start --version ${HIGLASS_DOCKER_VERSION} --default-track-options data/default_options.json
     docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
 end default-options
 
 start wait
     URL="localhost:$PORT/api/v1/tilesets/"
-    until curl $URL; do
+    until curl ${URL}; do
         sleep 1
     done
-    curl $URL | grep dixon.mcool \
+    curl ${URL} | grep dixon.mcool \
         || die
 end wait
 
@@ -65,19 +71,19 @@ start cleanup
 end cleanup
 
 start redis
-    [ -e $(PWD)/test-hg-data ] && rm -rf $(PWD)/test-hg-data
-    [ -e $(PWD)/test-hg-media ] && rm -rf $(PWD)/test-hg-media
-    [ -e $(PWD)/test-redis ] && rm -rf $(PWD)/test-redis
+    [ -e ${TMPDIR}/test-hg-data ] && rm -rf ${TMPDIR}/test-hg-data
+    [ -e ${TMPDIR}/test-hg-media ] && rm -rf ${TMPDIR}/test-hg-media
+    [ -e ${TMPDIR}/test-redis ] && rm -rf ${TMPDIR}/test-redis
 
-    mkdir test-hg-data
-    mkdir test-hg-media
-    mkdir test-redis
+    mkdir ${TMPDIR}/test-hg-data
+    mkdir ${TMPDIR}/test-hg-media
+    mkdir ${TMPDIR}/test-redis
 
     higlass-manage start --version $HIGLASS_DOCKER_VERSION \
 		   --hg-name test-hg \
-		   --data-dir $(PWD)/test-hg-data \
-		   --media-dir $(PWD)/test-hg-media \
-		   --redis-dir $(PWD)/test-redis \
+		   --data-dir ${TMPDIR}/test-hg-data \
+		   --media-dir ${TMPDIR}/test-hg-media \
+		   --redis-dir ${TMPDIR}/test-redis \
 		   --use-redis
 
     docker exec -i higlass-manage-redis-default 'redis-cli' < <(echo ping) || die
