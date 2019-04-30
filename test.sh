@@ -20,7 +20,6 @@ end get-data
 
 HIGLASS_DOCKER_VERSION=v0.6.9;
 
-
 start ingest
     [ -e ${TMPDIR}/test-hg-data ] && rm -rf ${TMPDIR}/test-hg-data
     [ -e ${TMPDIR}/test-hg-media ] && rm -rf ${TMPDIR}/test-hg-media
@@ -84,7 +83,7 @@ start redis
 		   --redis-dir ${TMPDIR}/test-redis \
 		   --use-redis
 
-    docker exec -i higlass-manage-redis-default 'redis-cli' < <(echo ping) || die
+    docker exec -i higlass-manage-redis-test-hg-with-redis 'redis-cli' < <(echo ping) || die
 end redis
 
 start cleanup
