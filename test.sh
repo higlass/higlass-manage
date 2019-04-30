@@ -7,12 +7,13 @@ die() { set +v; echo "$*" 1>&2 ; sleep 1; exit 1; }
 # Race condition truncates logs on Travis: "sleep" might help.
 # https://github.com/travis-ci/travis-ci/issues/6018
 
-# Create temporary work directory
-TMPDIR=$(mktemp -d)
+# Due to Travis CI permissions, create temporary work
+# directory that is relative to the home directory
+TMPDIR=$(mktemp --directory --tmpdir=${HOME})
 
 # Make sure it gets removed even if the script exits abnormally
-#trap "exit 1"           HUP INT PIPE QUIT TERM
-#trap 'rm -rf "$TMPDIR"' EXIT
+trap "exit 1"           HUP INT PIPE QUIT TERM
+trap 'rm -rf "$TMPDIR"' EXIT
 
 start get-data
     ./get_test_data.sh
