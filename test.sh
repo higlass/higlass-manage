@@ -75,7 +75,9 @@ start redis
     mkdir ${TMPDIR}/test-hg-media-with-redis
     mkdir ${TMPDIR}/test-redis
 
+    PORT=8124
     higlass-manage start --version $HIGLASS_DOCKER_VERSION \
+		   --port ${PORT} \
 		   --hg-name test-hg-with-redis \
 		   --data-dir ${TMPDIR}/test-hg-data-with-redis \
 		   --media-dir ${TMPDIR}/test-hg-media-with-redis \
