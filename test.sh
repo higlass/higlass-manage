@@ -12,7 +12,7 @@ die() { set +v; echo "$*" 1>&2 ; sleep 1; exit 1; }
 TMPDIR=$(mktemp --directory --tmpdir=${HOME})
 
 # Make sure it gets removed even if the script exits abnormally
-trap "exit 1"           HUP INT PIPE QUIT TERM
+#trap "exit 1"           HUP INT PIPE QUIT TERM
 trap 'rm -rf "$TMPDIR"' EXIT
 
 start get-data
