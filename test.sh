@@ -13,7 +13,7 @@ TMPDIR=$(mktemp --directory --tmpdir=${HOME})
 
 # Make sure it gets removed even if the script exits abnormally
 #trap "exit 1"           HUP INT PIPE QUIT TERM
-trap 'rm -rf "$TMPDIR"' EXIT
+#trap 'rm -rf "$TMPDIR"' EXIT
 
 start get-data
     ./get_test_data.sh
