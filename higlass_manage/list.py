@@ -1,10 +1,11 @@
+import sys
 import click
 import docker
 import json
 import requests
 
 from higlass_manage.common import get_port
-from higlass_manage.common import CONTAINER_PREFIX
+from higlass_manage.common import CONTAINER_PREFIX, REDIS_PREFIX
 
 @click.command()
 @click.option('--hg-name', default='default', 
@@ -20,12 +21,12 @@ def tilesets(hg_name):
     ret = requests.get(url)
 
     if ret.status_code != 200:
-        print('Error retrieving tilesets:', ret)
+        sys.stderr.write('Error retrieving tilesets: {}'.format(ret))
         return
 
     j = json.loads(ret.content.decode('utf8'))
     for result in j['results']:
-        print(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']]))
+        sys.stdout.write("{}\n".format(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']])))
 
 @click.command()
 def instances():
@@ -41,4 +42,10 @@ def instances():
             config = client.api.inspect_container(container.name)
             directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in  config['Mounts']])
             port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
-            print(hm_name, "{} {}".format(directories, port))
+            sys.stdout.write("higlass\t{}\t{}\t{}\n".format(hm_name, directories, port))
+        if name.find(REDIS_PREFIX) == 0:
+            redis_name = name[len(REDIS_PREFIX)+1:]
+            redis_config = client.api.inspect_container(container.name)
+            redis_directories = " ".join( ['{}:{}'.format(m['Source'], m['Destination']) for m in redis_config['Mounts']])
+            sys.stdout.write("redis\t{}\t{}\t.\n".format(redis_name, redis_directories))
+

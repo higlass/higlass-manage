@@ -6,7 +6,9 @@ import slugid
 import sys
 
 CONTAINER_PREFIX = 'higlass-manage-container'
-
+NETWORK_PREFIX = 'higlass-manage-network'
+REDIS_PREFIX = 'higlass-manage-redis'
+REDIS_CONF = '/usr/local/etc/redis/redis.conf'
 
 def md5(fname):
     hash_md5 = hashlib.md5()
@@ -17,6 +19,12 @@ def md5(fname):
 
 def hg_name_to_container_name(hg_name):
     return '{}-{}'.format(CONTAINER_PREFIX, hg_name)
+
+def hg_name_to_network_name(hg_name):
+    return '{}-{}'.format(NETWORK_PREFIX, hg_name)
+
+def hg_name_to_redis_name(hg_name):
+    return '{}-{}'.format(REDIS_PREFIX, hg_name)
 
 def get_port(hg_name):
     client = docker.from_env()
@@ -32,7 +40,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
     If no filetype or datatype are provided, add them
     based on the given filename.
 
-    Paramters:
+    Parameters:
     ----------
     filename: str
         The name of the file
