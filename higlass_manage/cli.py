@@ -7,9 +7,14 @@ from higlass_manage.stop import stop
 from higlass_manage.shell import shell
 from higlass_manage.view import view
 from higlass_manage.logs import logs
+from higlass_manage import __version__
 
 import higlass_manage.create as hmce
 import higlass_manage.delete as hmde
+
+@click.command()
+def version():
+    print(__version__)
 
 @click.group()
 def list():
@@ -43,3 +48,4 @@ cli.add_command(stop)
 cli.add_command(shell)
 cli.add_command(view)
 cli.add_command(logs)
+cli.add_command(version)
