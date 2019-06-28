@@ -21,7 +21,7 @@ from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX
         type=str)
 @click.option('-v', '--version',
         default='latest',
-        help='The version of the Docker container to use',
+        help='The version of the Docker container to use (or "local" for images built locally using higlass-docker)',
         type=str)
 @click.option('-p', '--port',
         default=8989,
