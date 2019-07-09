@@ -29,10 +29,10 @@ from higlass_manage.ingest import _ingest
 @click.option('--public-data/--no-public-data',
         default=True,
         help='Include or exclude public data in the list of available tilesets')
-@click.option('--coordsystem', default=None, help="The coordsystem that this data is mapped to")
+@click.option('--coordSystem', default=None, help="The coordSystem that this data is mapped to")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
 def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
-        coordsystem, chromsizes_filename):
+        coordSystem, chromsizes_filename):
     '''
     View a file in higlass.
 
@@ -104,7 +104,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name, filetype, datatype, coordsystem=coordsystem,
+        uuid = _ingest(filename, hg_name, filetype, datatype, coordSystem=coordSystem,
                 chromsizes_filename=chromsizes_filename)
 
     if uuid is None:

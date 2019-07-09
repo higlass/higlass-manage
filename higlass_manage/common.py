@@ -127,7 +127,7 @@ def infer_datatype(filetype):
     if filetype == 'beddb':
         return 'bedlike'
 
-def import_file(hg_name, filepath, filetype, datatype, coordsystem, name, uid, no_upload, project_name):
+def import_file(hg_name, filepath, filetype, datatype, coordSystem, name, uid, no_upload, project_name):
     # get this container's temporary directory
     if not no_upload:
         temp_dir = get_temp_dir(hg_name)
@@ -148,7 +148,7 @@ def import_file(hg_name, filepath, filetype, datatype, coordsystem, name, uid, n
     else:
         filename = filepath
 
-    coordSystem = '--coordSystem {}'.format(coordsystem) if coordsystem is not None else ''
+    coordSystem = '--coordSystem {}'.format(coordSystem) if coordSystem is not None else ''
     name_text = '--name "{}"'.format(name) if name is not None else ''
     project_name_text = '--project-name "{}"'.format(project_name) if project_name is not None else ''
 
