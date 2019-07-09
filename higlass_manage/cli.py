@@ -1,5 +1,6 @@
 import click
 
+from higlass_manage.browser import browser
 from higlass_manage.ingest import ingest
 from higlass_manage.list import tilesets, instances
 from higlass_manage.start import start
@@ -43,3 +44,4 @@ cli.add_command(stop)
 cli.add_command(shell)
 cli.add_command(view)
 cli.add_command(logs)
+cli.add_command(browser)
