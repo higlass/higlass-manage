@@ -103,13 +103,13 @@ def start(temp_dir,
            redis_repository,
            redis_tag,
            redis_port)
-def _start(temp_dir='/tmp/higlass-docker', 
-           data_dir='~/hg-data', 
-           version='latest', 
-           port=8989, 
-           hg_name='default', 
+def _start(temp_dir='/tmp/higlass-docker',
+           data_dir='~/hg-data',
+           version='latest',
+           port=8989,
+           hg_name='default',
            site_url=None,
-           media_dir=None, 
+           media_dir=None,
            public_data=True,
            default_track_options=None,
            workers=None,
@@ -152,7 +152,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                 network.remove()
         except docker.errors.APIError:
             sys.stderr.write("Error: Could not access Docker network list to remove existing network.\n")
-            sys.exit(-1)            
+            sys.exit(-1)
 
         try:
             # https://docker-py.readthedocs.io/en/stable/networks.html
@@ -221,7 +221,14 @@ def _start(temp_dir='/tmp/higlass-docker',
     else:
         sys.stderr.write("Pulling latest image... \n")
         sys.stderr.flush()
-        hg_image = client.images.pull(hg_repository, version)
+        try:
+            hg_image = client.images.pull(hg_repository, version)
+        except docker.errors.ImageNotFound:
+            sys.stderr.write("Error during image pull\n{}\n".format(err)):
+            sys.stderr.write("Try 'docker pull {}:{}': The CLI error many be more helpful.\n".format(
+                hg_repository, version
+            ))
+            sys.exit(-1)
         sys.stderr.write("done\n")
         sys.stderr.flush()
 
@@ -276,7 +283,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                                              environment=hg_environment,
                                              publish_all_ports=True,
                                              detach=True)
-        
+
     sys.stderr.write('Docker started: {}\n'.format(hg_container_name))
 
     started = False
@@ -285,7 +292,7 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             sys.stderr.write("sending request {}\n".format(counter))
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
+            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port),
                     timeout=5)
             # sys.stderr.write("request returned {} {}\n".format(req.status_code, req.content))
 
@@ -310,8 +317,8 @@ def _start(temp_dir='/tmp/higlass-docker',
 
         sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
 
-        ret = hg_container.exec_run(sed_command)   
-             
+        ret = hg_container.exec_run(sed_command)
+
     if not public_data:
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']
