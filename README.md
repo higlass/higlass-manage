@@ -109,8 +109,8 @@ either the `--assembly` or `--chromsizes-filename` parameters.
 
 ```
 pete@twok:~/projects/higlass-manage$ higlass-manage list tilesets
-VlWKy6ofT6qMFGf-uG_5pQ | beddb | bedlike | GSE93955_CHIP_DMC1_B6_peaks.bed.multires
-LAXFhHhASa2zDgJRRS67cw | cooler | matrix | H3K27me3_HiChIP_1.multi.cool
+VlWKy6ofT6qMFGf-uG_5pQ | beddb | bedlike |  | GSE93955_CHIP_DMC1_B6_peaks.bed.multires
+LAXFhHhASa2zDgJRRS67cw | cooler | matrix |  | H3K27me3_HiChIP_1.multi.cool
 ```
 
 ### Starting a shell
