@@ -1,5 +1,5 @@
-clodius>=0.10.3
-higlass-python>=0.1.1
-docker
+clodius==0.10.3
+higlass-python==0.1.1
+docker==4.0.2
 ipywidgets
 slugid==2.0.0
