@@ -125,9 +125,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     view = View([
         Track(track_type=tracktype, position=position,
-          tileset_uuid=uuid,
-          server='http://localhost:{}/api/v1/'.format(port),
-          height=200),
+              tileset_uuid=uuid,
+              server='http://localhost:{}/api/v1/'.format(port),
+              height=200),
     ])
 
     viewconf = ViewConf(
