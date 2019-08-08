@@ -111,7 +111,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         # couldn't ingest the file
         return
 
-    import higlass.client as hgc
+    from higlass.client import Track, View, ViewConf
 
     if datatype is None:
         datatype = inferred_datatype
@@ -123,15 +123,18 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
-    conf = hgc.ViewConf()
-    view = conf.add_view()
+    view = View([
+        Track(track_type=tracktype, position=position,
+              tileset_uuid=uuid,
+              server='http://localhost:{}/api/v1/'.format(port),
+              height=200),
+    ])
 
-    track = view.add_track(track_type=tracktype,
-            server='http://localhost:{}/api/v1/'.format(port),
-            tileset_uuid=uuid, position=position, 
-            height=200)
+    viewconf = ViewConf(
+        [view]
+    )
 
-    conf = json.loads(json.dumps(conf.to_dict()))
+    conf = viewconf.to_dict()
 
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
