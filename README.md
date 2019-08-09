@@ -148,6 +148,13 @@ The locally built image must be named `image-default`. Usually built using [higl
    higlass-manage start --version local
    ```
 
+## Release
+
+Get confirmation from another developer that the current state of master is good, then:
+```
+bumpversion patch
+python setup.py sdist upload -r pypi
+```
 ---
 
 ## License
