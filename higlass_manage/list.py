@@ -8,7 +8,7 @@ from higlass_manage.common import get_port
 from higlass_manage.common import CONTAINER_PREFIX, REDIS_PREFIX
 
 @click.command()
-@click.option('--hg-name', default='default', 
+@click.option('--hg-name', default='default',
         help='The name of the higlass container to import this file to')
 def tilesets(hg_name):
     '''
@@ -26,7 +26,7 @@ def tilesets(hg_name):
 
     j = json.loads(ret.content.decode('utf8'))
     for result in j['results']:
-        sys.stdout.write("{}\n".format(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name']])))
+        sys.stdout.write("{}\n".format(" | ".join([result['uuid'], result['filetype'], result['datatype'], result['coordSystem'], result['name'], result['datafile' ]])))
 
 @click.command()
 def instances():

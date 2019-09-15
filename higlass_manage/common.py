@@ -65,7 +65,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
             print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
             if recommended_filetype is not None:
                 print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
-            
+
             return (None, None)
 
     if datatype is None:
@@ -81,7 +81,6 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
     return (filetype, datatype)
 
 def recommend_filetype(filename):
-    ext = op.splitext(filename)
     if op.splitext(filename)[1] == '.bed':
         return 'bedfile'
     if op.splitext(filename)[1] == '.bedpe':
@@ -104,6 +103,8 @@ def datatype_to_tracktype(datatype):
         return ('2d-rectangle-domains', 'center')
     elif datatype == 'bedlike':
         return ('bedlike', 'top')
+    elif datatype == 'reads':
+        return ('pileup', 'top')
 
     return (None, None)
 
@@ -120,6 +121,8 @@ def infer_filetype(filename):
         return 'hitile'
     elif ext.lower() == '.beddb':
         return 'beddb'
+    elif ext.lower() == '.bam':
+        return 'bam'
 
     return None
 
@@ -134,14 +137,16 @@ def infer_datatype(filetype):
         return 'vector'
     if filetype == 'beddb':
         return 'bedlike'
+    if filetype == 'bam':
+        return 'reads'
 
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
-    if not no_upload:
+    if not no_upload or filetype == 'bam':
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
-            
+
         filename = op.split(filepath)[1]
         to_import_path = op.join(temp_dir, filename)
 
@@ -167,22 +172,61 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
-    if no_upload:
+    uid = uid if uid is not None else slugid.nice()
+
+    if filetype == 'bam':
+        ## bamfiles require special treatment because they will be placed in
+        # the static directory
+        index_filepath = filepath + '.bai'
+        if not op.exists(index_filepath):
+            print(f"Index file not found at {index_filepath}")
+            sys.exit(1)
+
+        data_dir = get_data_dir(hg_name)
+        static_dir = op.join(data_dir, 'static')
+
+
+        static_filename = op.join(static_dir, filename)
+        static_index = op.join(static_dir, filename + ".bai")
+
+        if op.exists(static_filename) or op.exists(static_index):
+            print("generating uuid")
+            uuid = slugid.nice()
+            static_filename = f'{op.splitext(static_filename)[0]}.{uuid}.bam'
+            static_index = f'{op.splitext(op.splitext(static_index)[0])[0]}.{uuid}.bam.bai'
+
+        os.symlink(filepath, static_filename)
+        os.symlink(filepath, static_index)
+
+        datafile = op.join('static', op.split(static_filename)[1])
+
+        command = (
+            'python higlass-server/manage.py shell --command="' +
+            'import tilesets.models as tm; ' +
+            'tm.Tileset.objects.create('
+                f"""datafile='{static_filename}',""" +
+                f"""filetype='{filetype}',""" +
+                f"""datatype='{datatype}',""" +
+                f"""coordSystem='{coordSystem}',""" +
+                f"""coordSystem2='{coordSystem}',""" +
+                f"""owner=None,""" +
+                f"""project={project_name},""" +
+                f"""uuid='{uid}',""" +
+                f"""temporary=False,""" +
+                f"""name='{name}')""" +
+            ';"')
+        print("command:", command)
+    elif no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' {}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {} {} --no-upload'.format(
-                    filetype, datatype, name_text, project_name_text, coordSystem))
+                ' --uid {} --filetype {} --datatype {} {} {} {} --no-upload'.format(
+                    uid, filetype, datatype, name_text, project_name_text, coordSystem)
+                )
     else:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' /tmp/{}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {} {}'.format(
-                    filetype, datatype, name_text, project_name_text, coordSystem))
-
-    if uid is not None:
-        command += ' --uid {}'.format(uid)
-    else:
-        uid = slugid.nice()
-        command += ' --uid {}'.format(uid)
+                ' --uid {} --filetype {} --datatype {} {} {} {}'.format(
+                    uid, filetype, datatype, name_text, project_name_text, coordSystem))
 
     print('command:', command)
 
