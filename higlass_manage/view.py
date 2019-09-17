@@ -31,7 +31,7 @@ from higlass_manage.ingest import _ingest
         help='Include or exclude public data in the list of available tilesets')
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
+def view(filename, hg_name, filetype, datatype, tracktype, position, public_data,
         assembly, chromsizes_filename):
     '''
     View a file in higlass.
@@ -73,7 +73,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     try:
         MAX_TILESETS=100000
         req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
-        
+
         tilesets = json.loads(req.content)
 
         for tileset in tilesets['results']:
@@ -88,16 +88,36 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
             # print("import_filename", import_filename)
             # print("tileset_filename", tileset_filename)
+            print("tilset_filename", tileset['datafile'])
+            print("tileset_path:", tileset_path)
+            print("subpath:", subpath)
+            print("data_dir:", data_dir)
+            print("filename", filename)
 
             if tileset_filename.find(import_filename) >= 0:
                 # same filenames, make sure they're actually the same file
                 # by comparing checksums
-                checksum1 = md5(tileset_path)
-                checksum2 = md5(filename)
+                if filetype == 'bam':
+                    # bam files are linked in to the static directory
+                    # so we just need to make sure they're the same
+                    static_dir = op.join(data_dir, 'static')
+                    filename_only = op.split(tileset_path)[1]
 
-                if checksum1 == checksum2:
-                    uuid = tileset['uuid']
-                    break
+                    static_path = op.join(static_dir, filename_only)
+
+                    # print("static_path:", op.realpath(static_path))
+                    # print("file_path:", op.realpath(filename))
+                    if op.realpath(static_path) == op.realpath(filename):
+                        uuid = tileset['uuid']
+                else:
+                    # other file types need to be copied into the media
+                    # directory
+                    checksum1 = md5(tileset_path)
+                    checksum2 = md5(filename)
+
+                    if checksum1 == checksum2:
+                        uuid = tileset['uuid']
+                        break
     except requests.exceptions.ConnectionError:
         print("Error getting a list of existing tilesets", file=sys.stderr)
         return
@@ -118,7 +138,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if tracktype is None and position is None:
         (tracktype, position) = datatype_to_tracktype(datatype)
-        
+
         if tracktype is None:
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return

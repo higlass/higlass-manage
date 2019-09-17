@@ -10,6 +10,22 @@ import time
 
 from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX, REDIS_CONF
 
+def get_static_volumes(data_dir):
+    '''
+    Create volume mounts for all the symbolic links in the
+    volumes directory.
+    '''
+    static_dir = op.join(data_dir, 'static')
+    counter = 0
+    volumes = {}
+
+    for file in os.listdir(static_dir):
+        if op.islink(op.join(static_dir,file)):
+            volumes[op.join(static_dir, file)] = {
+                'bind': op.join('/data/static/', file),
+            }
+    return volumes
+
 @click.command()
 @click.option('-t', '--temp-dir',
         default='/tmp/higlass-docker',
@@ -103,13 +119,13 @@ def start(temp_dir,
            redis_repository,
            redis_tag,
            redis_port)
-def _start(temp_dir='/tmp/higlass-docker', 
-           data_dir='~/hg-data', 
-           version='latest', 
-           port=8989, 
-           hg_name='default', 
+def _start(temp_dir='/tmp/higlass-docker',
+           data_dir='~/hg-data',
+           version='latest',
+           port=8989,
+           hg_name='default',
            site_url=None,
-           media_dir=None, 
+           media_dir=None,
            public_data=True,
            default_track_options=None,
            workers=None,
@@ -152,7 +168,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                 network.remove()
         except docker.errors.APIError:
             sys.stderr.write("Error: Could not access Docker network list to remove existing network.\n")
-            sys.exit(-1)            
+            sys.exit(-1)
 
         try:
             # https://docker-py.readthedocs.io/en/stable/networks.html
@@ -242,15 +258,18 @@ def _start(temp_dir='/tmp/higlass-docker',
         hg_environment['WORKERS'] = workers
 
     sys.stderr.write('Data directory: {}\n'.format(data_dir))
-    sys.stderr.write('Temp directory: ()\n'.format(temp_dir))
+    sys.stderr.write('Temp directory: {}\n'.format(temp_dir))
 
     hg_version_addition = '' if version is None else ':{}'.format(version)
 
     sys.stderr.write('Starting... {} {}\n'.format(hg_name, port))
+    static_volumes = get_static_volumes(data_dir)
+
     hg_volumes={
         temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
-        data_dir : { 'bind' : '/data', 'mode' : 'rw' }
-        }
+        data_dir : { 'bind' : '/data', 'mode' : 'rw' },
+        **static_volumes,
+    }
 
     if media_dir:
         hg_volumes[media_dir] = { 'bind' : '/media', 'mode' : 'rw' }
@@ -276,7 +295,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                                              environment=hg_environment,
                                              publish_all_ports=True,
                                              detach=True)
-        
+
     sys.stderr.write('Docker started: {}\n'.format(hg_container_name))
 
     started = False
@@ -285,7 +304,7 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             sys.stderr.write("sending request {}\n".format(counter))
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
+            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port),
                     timeout=5)
             # sys.stderr.write("request returned {} {}\n".format(req.status_code, req.content))
 
@@ -310,8 +329,8 @@ def _start(temp_dir='/tmp/higlass-docker',
 
         sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
 
-        ret = hg_container.exec_run(sed_command)   
-             
+        ret = hg_container.exec_run(sed_command)
+
     if not public_data:
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']

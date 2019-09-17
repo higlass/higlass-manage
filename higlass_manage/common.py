@@ -174,6 +174,7 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     uid = uid if uid is not None else slugid.nice()
 
+    print("filetype", filetype)
     if filetype == 'bam':
         ## bamfiles require special treatment because they will be placed in
         # the static directory
@@ -228,10 +229,7 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
                 ' --uid {} --filetype {} --datatype {} {} {} {}'.format(
                     uid, filetype, datatype, name_text, project_name_text, coordSystem))
 
-    print('command:', command)
-
     (exit_code, output) = container.exec_run(command)
-
 
     if exit_code != 0:
         print("ERROR:", output.decode('utf8'), file=sys.stderr)
