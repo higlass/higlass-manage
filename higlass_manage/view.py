@@ -156,6 +156,17 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     conf = viewconf.to_dict()
 
+    if filetype == 'bam':
+        track = conf['views'][0]['tracks']['top'][0]
+        del track['tilesetUid']
+        del track['server']
+        track['data'] = {
+            'type': 'bam',
+            'url': '/sc/SRR1770413.sorted.bam',
+        }
+
+    print("conf:", conf)
+
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
 
