@@ -31,7 +31,7 @@ from higlass_manage.ingest import _ingest
         help='Include or exclude public data in the list of available tilesets')
 @click.option('--assembly', default=None, help="The assembly that this data is mapped to")
 @click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
+def view(filename, hg_name, filetype, datatype, tracktype, position, public_data,
         assembly, chromsizes_filename):
     '''
     View a file in higlass.
@@ -70,10 +70,14 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
               "please specify them using the command line options", file=sys.stderr)
         return
 
+    url = False
+    if filename[:7] == 'http://' or filename[:8] == 'https://':
+        url = True
+
     try:
         MAX_TILESETS=100000
         req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
-        
+
         tilesets = json.loads(req.content)
 
         for tileset in tilesets['results']:
@@ -118,7 +122,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if tracktype is None and position is None:
         (tracktype, position) = datatype_to_tracktype(datatype)
-        
+
         if tracktype is None:
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
@@ -135,6 +139,19 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     )
 
     conf = viewconf.to_dict()
+
+    if filetype == 'bam':
+        track = conf['views'][0]['tracks']['top'][0]
+        del track['tilesetUid']
+        del track['server']
+        track['data'] = {
+            'type': 'bam',
+            'url': '/sc/SRR1770413.sorted.bam',
+        }
+
+        conf['views'][0]['tracks']['top'].insert(0, {"type": "top-axis"})
+        # create a smaller viewport so that people can see their reads
+        conf['views'][0]['initialXDomain'] = [0, 100000]
 
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]

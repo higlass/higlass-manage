@@ -65,7 +65,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
             print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
             if recommended_filetype is not None:
                 print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
-            
+
             return (None, None)
 
     if datatype is None:
@@ -104,6 +104,8 @@ def datatype_to_tracktype(datatype):
         return ('2d-rectangle-domains', 'center')
     elif datatype == 'bedlike':
         return ('bedlike', 'top')
+    elif datatype == 'reads':
+        return ('pileup', 'top')
 
     return (None, None)
 
@@ -120,6 +122,8 @@ def infer_filetype(filename):
         return 'hitile'
     elif ext.lower() == '.beddb':
         return 'beddb'
+    elif ext.lower() == '.bam':
+        return 'bam'
 
     return None
 
@@ -134,6 +138,8 @@ def infer_datatype(filetype):
         return 'vector'
     if filetype == 'beddb':
         return 'bedlike'
+    if filetype == 'bam':
+        return 'reads'
 
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
@@ -141,7 +147,7 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
-            
+
         filename = op.split(filepath)[1]
         to_import_path = op.join(temp_dir, filename)
 
