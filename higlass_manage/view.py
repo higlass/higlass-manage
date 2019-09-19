@@ -74,6 +74,16 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     if filename[:7] == 'http://' or filename[:8] == 'https://':
         url = True
 
+    if url and filetype != 'bam':
+        print("Only bam files can be specified as urls", tile=sys.stderr)
+        return;
+
+    if url:
+        client = docker.from_env()
+        container_name = hg_name_to_container_name(hg_name)
+        container = client.containers.get(container_name)
+        return
+        ret = hg_container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
     try:
         MAX_TILESETS=100000
         req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
