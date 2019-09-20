@@ -141,6 +141,61 @@ def infer_datatype(filetype):
     if filetype == 'bam':
         return 'reads'
 
+def tileset_uuid_by_exact_filepath(hg_name, filepath):
+    '''
+    Retrieve the uuid of a tileset given a filepath.
+
+    Args:
+        hg_name: The name of the higlass instance
+        filepath: The path of the file.
+    '''
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    container = client.containers.get(container_name)
+
+    cmd = """python higlass-server/manage.py shell --command="import tilesets.models as tm; objs=tm.Tileset.objects.filter(datafile='{}');print(objs[0].uuid if len(objs) else '')" """.format(filepath)
+    print("cmd:", cmd)
+    (ret, output) = container.exec_run(cmd);
+    print("output", output.decode('utf8'))
+    stripped_output = output.decode('utf8').strip('\n')
+
+    # return the uuid parsed out of the output
+    return stripped_output if len(stripped_output) else None
+
+def tileset_uuid_by_filename(hg_name, filename):
+    try:
+        MAX_TILESETS=100000
+        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
+
+        tilesets = json.loads(req.content)
+
+        for tileset in tilesets['results']:
+            import_filename = op.splitext(ntpath.basename(filename))[0]
+            tileset_filename = ntpath.basename(tileset['datafile'])
+
+            subpath_index = tileset['datafile'].find('/tilesets/')
+            subpath = tileset['datafile'][subpath_index + len('/tilesets/'):]
+
+            data_dir = get_data_dir(hg_name)
+            tileset_path = op.join(data_dir, subpath)
+
+            # print("import_filename", import_filename)
+            # print("tileset_filename", tileset_filename)
+
+            if tileset_filename.find(import_filename) >= 0:
+                # same filenames, make sure they're actually the same file
+                # by comparing checksums
+                checksum1 = md5(tileset_path)
+                checksum2 = md5(filename)
+
+                if checksum1 == checksum2:
+                    uuid = tileset['uuid']
+                    break
+    except requests.exceptions.ConnectionError:
+        print("Error getting a list of existing tilesets", file=sys.stderr)
+        return
+    return uuid
+
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
     if not no_upload:
@@ -172,6 +227,23 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     print("hg_name:", hg_name)
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
+
+    if url:
+        command = (
+            'python higlass-server/manage.py shell --command="' +
+            'import tilesets.models as tm; ' +
+            'tm.Tileset.objects.create('
+                f"""datafile='{static_filename}',""" +
+                f"""filetype='{filetype}',""" +
+                f"""datatype='{datatype}',""" +
+                f"""coordSystem='{coordSystem}',""" +
+                f"""coordSystem2='{coordSystem}',""" +
+                f"""owner=None,""" +
+                f"""project={project_name},""" +
+                f"""uuid='{uid}',""" +
+                f"""temporary=False,""" +
+                f"""name='{name}')""" +
+            ';"')
 
     if no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +

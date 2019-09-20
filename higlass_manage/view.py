@@ -13,6 +13,9 @@ from higlass_manage.common import get_data_dir
 from higlass_manage.common import get_temp_dir
 from higlass_manage.common import md5
 from higlass_manage.common import datatype_to_tracktype
+from higlass_manage.common import tileset_uuid_by_exact_filepath
+from higlass_manage.common import tileset_uuid_by_filename
+
 from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
@@ -79,42 +82,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         return;
 
     if url:
-        client = docker.from_env()
-        container_name = hg_name_to_container_name(hg_name)
-        container = client.containers.get(container_name)
-        return
-        ret = hg_container.exec_run("""python higlass-server/manage.py shell --command="import tilesets.models as tm; o = tm.ViewConf.objects.get(uuid='default_local'); o.delete();" """);
-    try:
-        MAX_TILESETS=100000
-        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
-
-        tilesets = json.loads(req.content)
-
-        for tileset in tilesets['results']:
-            import_filename = op.splitext(ntpath.basename(filename))[0]
-            tileset_filename = ntpath.basename(tileset['datafile'])
-
-            subpath_index = tileset['datafile'].find('/tilesets/')
-            subpath = tileset['datafile'][subpath_index + len('/tilesets/'):]
-
-            data_dir = get_data_dir(hg_name)
-            tileset_path = op.join(data_dir, subpath)
-
-            # print("import_filename", import_filename)
-            # print("tileset_filename", tileset_filename)
-
-            if tileset_filename.find(import_filename) >= 0:
-                # same filenames, make sure they're actually the same file
-                # by comparing checksums
-                checksum1 = md5(tileset_path)
-                checksum2 = md5(filename)
-
-                if checksum1 == checksum2:
-                    uuid = tileset['uuid']
-                    break
-    except requests.exceptions.ConnectionError:
-        print("Error getting a list of existing tilesets", file=sys.stderr)
-        return
+        uuid = tileset_uuid_by_exact_filepath(hg_name, filename)
+    else:
+        uuid = tileset_uuid_by_filename(hg_name, filename)
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
@@ -150,13 +120,13 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     conf = viewconf.to_dict()
 
-    if filetype == 'bam':
+    if filetype == 'bam' and url:
         track = conf['views'][0]['tracks']['top'][0]
         del track['tilesetUid']
         del track['server']
         track['data'] = {
             'type': 'bam',
-            'url': '/sc/SRR1770413.sorted.bam',
+            'url': filename,
         }
 
         conf['views'][0]['tracks']['top'].insert(0, {"type": "top-axis"})
