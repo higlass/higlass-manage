@@ -2,6 +2,7 @@ import docker
 import hashlib
 import os
 import os.path as op
+import requests
 import slugid
 import sys
 
@@ -154,9 +155,7 @@ def tileset_uuid_by_exact_filepath(hg_name, filepath):
     container = client.containers.get(container_name)
 
     cmd = """python higlass-server/manage.py shell --command="import tilesets.models as tm; objs=tm.Tileset.objects.filter(datafile='{}');print(objs[0].uuid if len(objs) else '')" """.format(filepath)
-    print("cmd:", cmd)
     (ret, output) = container.exec_run(cmd);
-    print("output", output.decode('utf8'))
     stripped_output = output.decode('utf8').strip('\n')
 
     # return the uuid parsed out of the output
@@ -196,9 +195,11 @@ def tileset_uuid_by_filename(hg_name, filename):
         return
     return uuid
 
-def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
+def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name, url=False):
+    print("Importing file:", filepath)
+
     # get this container's temporary directory
-    if not no_upload:
+    if not no_upload and not url:
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
@@ -228,12 +229,15 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
+    if uid is None:
+        uid = slugid.nice()
+
     if url:
         command = (
             'python higlass-server/manage.py shell --command="' +
             'import tilesets.models as tm; ' +
             'tm.Tileset.objects.create('
-                f"""datafile='{static_filename}',""" +
+                f"""datafile='{filename}',""" +
                 f"""filetype='{filetype}',""" +
                 f"""datatype='{datatype}',""" +
                 f"""coordSystem='{coordSystem}',""" +
@@ -244,28 +248,20 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
                 f"""temporary=False,""" +
                 f"""name='{name}')""" +
             ';"')
-
-    if no_upload:
+    elif no_upload:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' {}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {} {} --no-upload'.format(
-                    filetype, datatype, name_text, project_name_text, coordSystem))
+                ' --filetype {} --datatype {} {} {} {} --no-upload --uid {}'.format(
+                    filetype, datatype, name_text, project_name_text, coordSystem, uid))
     else:
         command =  ('python higlass-server/manage.py ingest_tileset --filename' +
                 ' /tmp/{}'.format(filename.replace(' ', '\ ')) +
-                ' --filetype {} --datatype {} {} {} {}'.format(
-                    filetype, datatype, name_text, project_name_text, coordSystem))
-
-    if uid is not None:
-        command += ' --uid {}'.format(uid)
-    else:
-        uid = slugid.nice()
-        command += ' --uid {}'.format(uid)
+                ' --filetype {} --datatype {} {} {} {} --uid {}'.format(
+                    filetype, datatype, name_text, project_name_text, coordSystem, uid))
 
     print('command:', command)
 
     (exit_code, output) = container.exec_run(command)
-
 
     if exit_code != 0:
         print("ERROR:", output.decode('utf8'), file=sys.stderr)

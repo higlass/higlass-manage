@@ -89,7 +89,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
         uuid = _ingest(filename, hg_name, filetype, datatype, assembly=assembly,
-                chromsizes_filename=chromsizes_filename)
+                chromsizes_filename=chromsizes_filename, url=url)
 
     if uuid is None:
         # couldn't ingest the file
@@ -131,7 +131,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
         conf['views'][0]['tracks']['top'].insert(0, {"type": "top-axis"})
         # create a smaller viewport so that people can see their reads
-        conf['views'][0]['initialXDomain'] = [0, 100000]
+        conf['views'][0]['initialXDomain'] = [0, 40000]
 
     conf['trackSourceServers'] = []
     conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
