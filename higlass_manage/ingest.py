@@ -60,7 +60,7 @@ def ingest(
     filetype=None,
     datatype=None,
     assembly=None,
-    name=None,
+    display_name=None,
     chromsizes_filename=None,
     has_header=False,
     uid=None,
@@ -76,7 +76,7 @@ def ingest(
         filetype,
         datatype,
         assembly,
-        name,
+        display_name,
         chromsizes_filename,
         has_header,
         uid,
@@ -91,7 +91,7 @@ def _ingest(
     filetype=None,
     datatype=None,
     assembly=None,
-    name=None,
+    display_name=None,
     chromsizes_filename=None,
     has_header=False,
     uid=None,
@@ -114,7 +114,7 @@ def _ingest(
     temp_dir = get_temp_dir(hg_name)
     (to_import, filetype) = aggregate_file(filename, filetype, assembly, chromsizes_filename, has_header, no_upload, temp_dir)
 
-    return import_file(hg_name, to_import, filetype, datatype, assembly, name, uid, no_upload, project_name)
+    return import_file(hg_name, to_import, filetype, datatype, assembly, display_name, uid, no_upload, project_name)
 
 
 def aggregate_file(
