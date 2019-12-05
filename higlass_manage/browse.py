@@ -6,6 +6,7 @@ import webbrowser
 
 from higlass_manage.common import get_port
 
+
 @click.command()
 @click.argument('names', nargs=-1)
 def browse(names):

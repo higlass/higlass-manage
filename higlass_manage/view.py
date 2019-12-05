@@ -16,25 +16,55 @@ from higlass_manage.common import datatype_to_tracktype
 from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
+
 @click.command()
 @click.argument('filename', nargs=1)
-@click.option('-n', '--hg-name',
-        default='default',
-        help='The name for this higlass instance',
-        type=str)
-@click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
-@click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
-@click.option('--tracktype', default=None, help="The track type used to view this file")
-@click.option('--position', default=None, help="The position in the view to place this track")
-@click.option('--public-data/--no-public-data',
-        default=True,
-        help='Include or exclude public data in the list of available tilesets')
-@click.option('--assembly', default=None, help="The assembly that this data is mapped to")
-@click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
-        assembly, chromsizes_filename):
+@click.option(
+    '-n', '--hg-name',
+    default='default',
+    help='The name for this higlass instance',
+    type=str)
+@click.option(
+    '--filetype',
+    default=None,
+    help="The type of file to ingest (e.g. cooler)")
+@click.option(
+    '--datatype',
+    default=None,
+    help="The data type of in the input file (e.g. matrix)")
+@click.option(
+    '--tracktype',
+    default=None,
+    help="The track type used to view this file")
+@click.option(
+    '--position',
+    default=None,
+    help="The position in the view to place this track")
+@click.option(
+    '--public-data/--no-public-data',
+    default=True,
+    help='Include or exclude public data in the list of available tilesets')
+@click.option(
+    '--assembly',
+    default=None,
+    help="The assembly that this data is mapped to")
+@click.option(
+    '--chromsizes-filename',
+    default=None,
+    help="A set of chromosome sizes to use for bed and bedpe files")
+def view(
+    filename,
+    hg_name,
+    filetype,
+    datatype,
+    tracktype,
+    position,
+    public_data,
+    assembly,
+    chromsizes_filename
+):
     '''
-    View a file in higlass.
+    View a file in HiGlass.
 
     The user can specify an instance to view it in. If one is
     not specified the default will be used. If the default isn't
@@ -71,9 +101,9 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         return
 
     try:
-        MAX_TILESETS=100000
+        MAX_TILESETS = 100000
         req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
-        
+
         tilesets = json.loads(req.content)
 
         for tileset in tilesets['results']:
@@ -104,8 +134,10 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name, filetype, datatype, assembly=assembly,
-                chromsizes_filename=chromsizes_filename)
+        uuid = _ingest(
+            filename, hg_name, filetype, datatype, assembly=assembly,
+            chromsizes_filename=chromsizes_filename
+        )
 
     if uuid is None:
         # couldn't ingest the file
@@ -118,7 +150,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if tracktype is None and position is None:
         (tracktype, position) = datatype_to_tracktype(datatype)
-        
+
         if tracktype is None:
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
@@ -143,8 +175,10 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         conf['trackSourceServers'] += ['http://higlass.io/api/v1/']
 
     # uplaod the viewconf
-    res = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port),
-            json={'viewconf': conf})
+    res = requests.post(
+        'http://localhost:{}/api/v1/viewconfs/'.format(port),
+        json={'viewconf': conf}
+    )
 
     if res.status_code != 200:
         print("Error posting viewconf:", res.status, res.content)
