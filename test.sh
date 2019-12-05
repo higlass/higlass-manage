@@ -37,10 +37,11 @@ start ingest
     higlass-manage view ${TMPDIR}/test-hg-media/dixon.mcool
 
     PORT=8123
-    higlass-manage start --version ${HIGLASS_DOCKER_VERSION} --port ${PORT} \
-                                   --hg-name test-hg \
-                                   --data-dir ${TMPDIR}/test-hg-data \
-                                   --media-dir ${TMPDIR}/test-hg-media
+    higlass-manage start test-hg \
+        --version ${HIGLASS_DOCKER_VERSION} \
+        --port ${PORT} \
+        --data-dir ${TMPDIR}/test-hg-data \
+        --media-dir ${TMPDIR}/test-hg-media
     higlass-manage ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
@@ -49,7 +50,7 @@ end ingest
 
 # check to make sure that the default options were loaded
 start default-options
-    higlass-manage start --version ${HIGLASS_DOCKER_VERSION} --default-track-options data/default_options.json
+    higlass-manage start default --version ${HIGLASS_DOCKER_VERSION} --default-track-options data/default_options.json
     docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
 end default-options
 
@@ -72,9 +73,9 @@ start redis
     mkdir ${TMPDIR}/test-redis
 
     PORT=8124
-    higlass-manage start --version $HIGLASS_DOCKER_VERSION \
+    higlass-manage start test-hg-with-redis \
+           --version $HIGLASS_DOCKER_VERSION \
 		   --port ${PORT} \
-		   --hg-name test-hg-with-redis \
 		   --data-dir ${TMPDIR}/test-hg-data-with-redis \
 		   --media-dir ${TMPDIR}/test-hg-media-with-redis \
 		   --redis-dir ${TMPDIR}/test-redis \
