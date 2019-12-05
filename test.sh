@@ -73,12 +73,12 @@ start redis
 
     PORT=8124
     higlass-manage start --version $HIGLASS_DOCKER_VERSION \
-		   --port ${PORT} \
-		   --hg-name test-hg-with-redis \
-		   --data-dir ${TMPDIR}/test-hg-data-with-redis \
-		   --media-dir ${TMPDIR}/test-hg-media-with-redis \
-		   --redis-dir ${TMPDIR}/test-redis \
-		   --use-redis
+           --port ${PORT} \
+           --hg-name test-hg-with-redis \
+           --data-dir ${TMPDIR}/test-hg-data-with-redis \
+           --media-dir ${TMPDIR}/test-hg-media-with-redis \
+           --redis-dir ${TMPDIR}/test-redis \
+           --use-redis
 
     docker exec -i higlass-manage-redis-test-hg-with-redis 'redis-cli' < <(echo ping) || die
 end redis

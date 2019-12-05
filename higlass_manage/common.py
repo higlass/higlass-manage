@@ -4,11 +4,15 @@ import os
 import os.path as op
 import slugid
 import sys
+import tempfile
 
 CONTAINER_PREFIX = 'higlass-manage-container'
 NETWORK_PREFIX = 'higlass-manage-network'
 REDIS_PREFIX = 'higlass-manage-redis'
 REDIS_CONF = '/usr/local/etc/redis/redis.conf'
+HOME_DIR = op.expanduser('~')
+TEMP_DIR = tempfile.gettempdir()
+
 
 def md5(fname):
     hash_md5 = hashlib.md5()
@@ -17,14 +21,18 @@ def md5(fname):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
+
 def hg_name_to_container_name(hg_name):
     return '{}-{}'.format(CONTAINER_PREFIX, hg_name)
+
 
 def hg_name_to_network_name(hg_name):
     return '{}-{}'.format(NETWORK_PREFIX, hg_name)
 
+
 def hg_name_to_redis_name(hg_name):
     return '{}-{}'.format(REDIS_PREFIX, hg_name)
+
 
 def get_port(hg_name):
     client = docker.from_env()
@@ -34,6 +42,7 @@ def get_port(hg_name):
     port = config['HostConfig']['PortBindings']['80/tcp'][0]['HostPort']
 
     return port
+
 
 def fill_filetype_and_datatype(filename, filetype, datatype):
     '''
@@ -65,7 +74,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
             print('Unknown filetype, please specify using the --filetype option', file=sys.stderr)
             if recommended_filetype is not None:
                 print("Based on the filename, you may want to try the filetype: {}".format(recommended_filetype))
-            
+
             return (None, None)
 
     if datatype is None:
@@ -80,6 +89,7 @@ def fill_filetype_and_datatype(filename, filetype, datatype):
 
     return (filetype, datatype)
 
+
 def recommend_filetype(filename):
     ext = op.splitext(filename)
     if op.splitext(filename)[1] == '.bed':
@@ -87,9 +97,11 @@ def recommend_filetype(filename):
     if op.splitext(filename)[1] == '.bedpe':
         return 'bedpe'
 
+
 def recommend_datatype(filetype):
     if filetype == 'bedfile':
         return 'bedlike'
+
 
 def datatype_to_tracktype(datatype):
     if datatype == 'matrix':
@@ -107,8 +119,9 @@ def datatype_to_tracktype(datatype):
 
     return (None, None)
 
+
 def infer_filetype(filename):
-    _,ext = op.splitext(filename)
+    _, ext = op.splitext(filename)
 
     if ext.lower() == '.bw' or ext.lower() == '.bigwig':
         return 'bigwig'
@@ -123,6 +136,7 @@ def infer_filetype(filename):
 
     return None
 
+
 def infer_datatype(filetype):
     if filetype == 'cooler':
         return 'matrix'
@@ -135,13 +149,14 @@ def infer_datatype(filetype):
     if filetype == 'beddb':
         return 'bedlike'
 
+
 def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name):
     # get this container's temporary directory
     if not no_upload:
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
-            
+
         filename = op.split(filepath)[1]
         to_import_path = op.join(temp_dir, filename)
 
@@ -188,12 +203,12 @@ def import_file(hg_name, filepath, filetype, datatype, assembly, name, uid, no_u
 
     (exit_code, output) = container.exec_run(command)
 
-
     if exit_code != 0:
         print("ERROR:", output.decode('utf8'), file=sys.stderr)
         return None
 
     return uid
+
 
 def get_temp_dir(hg_name):
     client = docker.from_env()
@@ -209,6 +224,7 @@ def get_temp_dir(hg_name):
         if mount['Destination'] == '/tmp':
             return mount['Source']
 
+
 def get_data_dir(hg_name):
     client = docker.from_env()
     container_name = hg_name_to_container_name(hg_name)
@@ -217,6 +233,7 @@ def get_data_dir(hg_name):
     for mount in config['Mounts']:
         if mount['Destination'] == '/data':
             return mount['Source']
+
 
 class HiGlassNotRunningException(Exception):
     pass

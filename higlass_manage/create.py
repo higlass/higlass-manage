@@ -3,9 +3,12 @@ import subprocess as sp
 
 from higlass_manage.common import hg_name_to_container_name
 
+
 @click.command()
-@click.option('--hg-name', default='default', 
-        help='The name of the higlass container to import this file to')
+@click.option(
+    '-n', '--hg-name',
+    default='default',
+    help='The name of the higlass container to import this file to')
 def superuser(hg_name):
     '''
     Create a superuser in the container
