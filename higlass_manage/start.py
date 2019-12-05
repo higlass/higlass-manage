@@ -132,6 +132,10 @@ from higlass_manage.common import (
     help="The port to use for the Redis image",
     type=int,
 )
+@click.option(
+    "-y", "--yes",
+    help="Don't prompt if data directory does not exist",
+    is_flag=True)
 def start(
     hg_name,
     data_dir,
@@ -149,6 +153,7 @@ def start(
     redis_repository,
     redis_tag,
     redis_port,
+    yes,
 ):
     """
     Start a HiGlass instance
@@ -171,6 +176,7 @@ def start(
         redis_repository,
         redis_tag,
         redis_port,
+        yes,
     )
 
 
@@ -191,21 +197,42 @@ def _start(
     redis_repository="redis",
     redis_tag="5.0.3-alpine",
     redis_port=6379,
+    yes=False,
 ):
     """
     Start a HiGlass instance
     """
+    click.echo(
+        'Starting HiGlass instance "{}" on port {}...\n'.format(hg_name, port)
+    )
+
+    hg_container_name = "{}-{}".format(CONTAINER_PREFIX, hg_name)
+
     if data_dir is None:
         container_root = op.join(HOME_DIR, ".higlass", "containers")
         data_dir = op.join(container_root, hg_name)
 
-    hg_container_name = "{}-{}".format(CONTAINER_PREFIX, hg_name)
+    data_dir = op.realpath(op.expanduser(data_dir))
+
+    if not op.exists(data_dir) and not yes:
+        if click.confirm(
+            'Data directory "{}" does not exist. Create?'.format(data_dir),
+            abort=True
+        ):
+            os.makedirs(data_dir)
+            click.echo('Created data directory {}'.format(data_dir))
+
+    else:
+        click.echo('Using data directory {}'.format(data_dir))
+
+    temp_dir = op.realpath(op.expanduser(temp_dir))
+    if not op.exists(temp_dir):
+        os.makedirs(temp_dir)
 
     client = docker.from_env()
 
     try:
         hg_container = client.containers.get(hg_container_name)
-
         sys.stderr.write("Stopping previously running container\n")
         hg_container.stop()
         hg_container.remove()
@@ -220,6 +247,11 @@ def _start(
         return
 
     if use_redis:
+        if redis_dir is None:
+            redis_dir = op.join(data_dir, 'redis')
+        redis_dir = op.realpath(os.expanduser(redis_dir))
+        click.echo('Starting redis [redis_dir: {}]'.format(redis_dir))
+
         network_name = "{}-{}".format(NETWORK_PREFIX, hg_name)
         redis_name = "{}-{}".format(REDIS_PREFIX, hg_name)
 
@@ -271,8 +303,6 @@ def _start(
         sys.stderr.flush()
 
         # set up Redis container settings and environment
-        redis_dir = op.expanduser(redis_dir)
-
         if not op.exists(redis_dir):
             os.makedirs(redis_dir)
 
@@ -330,14 +360,6 @@ def _start(
         sys.stderr.write("done\n")
         sys.stderr.flush()
 
-    data_dir = op.realpath(op.expanduser(data_dir))
-    temp_dir = op.realpath(op.expanduser(temp_dir))
-
-    if not op.exists(temp_dir):
-        os.makedirs(temp_dir)
-    if not op.exists(data_dir):
-        os.makedirs(data_dir)
-
     hg_environment = {}
 
     if site_url is not None:
@@ -347,9 +369,7 @@ def _start(
         hg_environment["WORKERS"] = workers
 
     sys.stderr.write("Data directory: {}\n".format(data_dir))
-    sys.stderr.write("Temp directory: ()\n".format(temp_dir))
-
-    sys.stderr.write("Starting... {} {}\n".format(hg_name, port))
+    sys.stderr.write("Temp directory: {}\n".format(temp_dir))
     hg_volumes = {
         temp_dir: {"bind": "/tmp", "mode": "rw"},
         data_dir: {"bind": "/data", "mode": "rw"},
