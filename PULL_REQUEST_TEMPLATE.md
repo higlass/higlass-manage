@@ -11,3 +11,4 @@ Fixes #___
 - [ ] Unit tests added or updated
 - [ ] Documentation added or updated
 - [ ] Updated CHANGELOG.md
+- [ ] Run `black .`

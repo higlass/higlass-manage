@@ -12,32 +12,41 @@ from higlass_manage import __version__
 import higlass_manage.create as hmce
 import higlass_manage.delete as hmde
 
+
 @click.command()
 def version():
     print(__version__)
+
 
 @click.group()
 def list():
     pass
 
+
 list.add_command(tilesets)
 list.add_command(instances)
+
 
 @click.group()
 def create():
     pass
 
+
 create.add_command(hmce.superuser)
+
 
 @click.group()
 def delete():
     pass
 
+
 delete.add_command(hmde.superuser)
+
 
 @click.group()
 def cli():
     pass
+
 
 cli.add_command(create)
 cli.add_command(delete)
