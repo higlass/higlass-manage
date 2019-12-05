@@ -8,121 +8,149 @@ import slugid
 import sys
 import time
 
-from higlass_manage.common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX, REDIS_CONF
+from higlass_manage.common import (
+    CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX, REDIS_CONF
+)
+
 
 @click.command()
-@click.option('-t', '--temp-dir',
-        default='/tmp/higlass-docker',
-        help='The temp directory to use',
-        type=str)
-@click.option('-d', '--data-dir',
-        default='~/hg-data',
-        help='The higlass data directory to use',
-        type=str)
-@click.option('-v', '--version',
-        default='latest',
-        help='The version of the Docker container to use (or "local" for images built locally using higlass-docker)',
-        type=str)
-@click.option('-p', '--port',
-        default=8989,
-        help='The port that the HiGlass instance should run on',
-        type=str)
-@click.option('-n', '--hg-name',
-        default='default',
-        help='The name for this higlass instance',
-        type=str)
-@click.option('-s', '--site-url',
-        default=None,
-        help='When creating an external-facing instance, enter its IP or hostname using this parameter',
-        type=str)
-@click.option('-m', '--media-dir',
-        default=None,
-        help='Use a specific media directory for uploaded files',
-        type=str)
-@click.option('--public-data/--no-public-data',
-        default=True,
-        help='Include or exclude public data in the list of available tilesets')
-@click.option('--default-track-options',
-        default=None,
-        help="Specify a json file containing default track options")
-@click.option('--workers',
-        default=None,
-        help="Specify a custom number of workers for the uWSGI application server")
-@click.option('--use-redis',
-              is_flag=True,
-              help="Initialize a Redis-based caching service and bind higlass instance to it")
-@click.option('--redis-dir',
-              default='~/redis-data',
-              help='Use a specific directory for Redis files',
-              type=str)
-@click.option('--hg-repository',
-              default='higlass/higlass-docker',
-              help='The Docker repository to use for the HiGlass image',
-              type=str)
-@click.option('--redis-repository',
-              default='redis',
-              help='The Docker repository to use for the Redis image',
-              type=str)
-@click.option('--redis-tag',
-              default='5.0.3-alpine',
-              help='The Docker tag to use for the Redis image repository',
-              type=str)
-@click.option('--redis-port',
-              default=6379,
-              help='The port to use for the Redis image',
-              type=int)
-def start(temp_dir,
-          data_dir,
-          version,
-          port,
-          hg_name,
-          site_url,
-          media_dir,
-          public_data,
-          default_track_options,
-          workers,
-          use_redis,
-          redis_dir,
-          hg_repository,
-          redis_repository,
-          redis_tag,
-          redis_port):
-    _start(temp_dir,
-           data_dir,
-           version,
-           port,
-           hg_name,
-           site_url,
-           media_dir,
-           public_data,
-           default_track_options,
-           workers,
-           use_redis,
-           redis_dir,
-           hg_repository,
-           redis_repository,
-           redis_tag,
-           redis_port)
-def _start(temp_dir='/tmp/higlass-docker', 
-           data_dir='~/hg-data', 
-           version='latest', 
-           port=8989, 
-           hg_name='default', 
-           site_url=None,
-           media_dir=None, 
-           public_data=True,
-           default_track_options=None,
-           workers=None,
-           use_redis=False,
-           redis_dir='~/redis-data',
-           hg_repository='higlass/higlass-docker',
-           redis_repository='redis',
-           redis_tag='5.0.3-alpine',
-           redis_port=6379):
+@click.argument(
+    'data-dir',
+    type=str)
+@click.option(
+    '-n', '--hg-name',
+    default='default',
+    help='The name for this HiGlass instance',
+    type=str)
+@click.option(
+    '-p', '--port',
+    default=8989,
+    help='The port that the HiGlass instance should run on',
+    type=str)
+@click.option(
+    '-t', '--temp-dir',
+    default='/tmp/higlass-docker',
+    help='The temp directory to use',
+    type=str)
+@click.option(
+    '-v', '--version',
+    default='latest',
+    help='The version of the Docker container to use (or "local" for images built locally using higlass-docker)',
+    type=str)
+@click.option(
+    '-s', '--site-url',
+    default=None,
+    help='When creating an external-facing instance, enter its IP or hostname using this parameter',
+    type=str)
+@click.option(
+    '-m', '--media-dir',
+    default=None,
+    help='Use a specific media directory for uploaded files. The default location is {data-dir}/media/uploads.',
+    type=str)
+@click.option(
+    '--public-data/--no-public-data',
+    default=True,
+    help='Include or exclude public data in the list of available tilesets')
+@click.option(
+    '--default-track-options',
+    default=None,
+    help="Specify a json file containing default track options")
+@click.option(
+    '--workers',
+    default=None,
+    help="Specify a custom number of workers for the uWSGI application server")
+@click.option(
+    '--use-redis',
+    is_flag=True,
+    help="Initialize a Redis-based caching service and bind higlass instance to it")
+@click.option(
+    '--redis-dir',
+    help='Use a specific directory for Redis files',
+    type=str)
+@click.option(
+    '--hg-repository',
+    default='higlass/higlass-docker',
+    help='The Docker repository to use for the HiGlass image',
+    type=str)
+@click.option(
+    '--redis-repository',
+    default='redis',
+    help='The Docker repository to use for the Redis image',
+    type=str)
+@click.option(
+    '--redis-tag',
+    default='5.0.3-alpine',
+    help='The Docker tag to use for the Redis image repository',
+    type=str)
+@click.option(
+    '--redis-port',
+    default=6379,
+    help='The port to use for the Redis image',
+    type=int)
+def start(
+    data_dir,
+    hg_name,
+    port,
+    temp_dir,
+    version,
+    site_url,
+    media_dir,
+    public_data,
+    default_track_options,
+    workers,
+    use_redis,
+    redis_dir,
+    hg_repository,
+    redis_repository,
+    redis_tag,
+    redis_port
+):
+    """
+    Start a HiGlass instance
+
+    """
+    _start(
+        data_dir,
+        hg_name,
+        port,
+        temp_dir,
+        version,
+        site_url,
+        media_dir,
+        public_data,
+        default_track_options,
+        workers,
+        use_redis,
+        redis_dir,
+        hg_repository,
+        redis_repository,
+        redis_tag,
+        redis_port
+    )
+
+
+def _start(
+    data_dir,
+    hg_name='default',
+    port=8989,
+    temp_dir='/tmp/higlass-docker',
+    version='latest',
+    site_url=None,
+    media_dir=None,
+    public_data=True,
+    default_track_options=None,
+    workers=None,
+    use_redis=False,
+    redis_dir=None,
+    hg_repository='higlass/higlass-docker',
+    redis_repository='redis',
+    redis_tag='5.0.3-alpine',
+    redis_port=6379
+):
     '''
     Start a HiGlass instance
     '''
-    hg_container_name = '{}-{}'.format(CONTAINER_PREFIX,hg_name)
+    hg_container_name = '{}-{}'.format(CONTAINER_PREFIX, hg_name)
 
     client = docker.from_env()
 
@@ -152,7 +180,7 @@ def _start(temp_dir='/tmp/higlass-docker',
                 network.remove()
         except docker.errors.APIError:
             sys.stderr.write("Error: Could not access Docker network list to remove existing network.\n")
-            sys.exit(-1)            
+            sys.exit(-1)
 
         try:
             # https://docker-py.readthedocs.io/en/stable/networks.html
@@ -192,8 +220,8 @@ def _start(temp_dir='/tmp/higlass-docker',
             sys.exit(-1)
 
         redis_volumes = {
-            redis_dir : { 'bind' : '/data', 'mode' : 'rw' },
-            redis_conf : { 'bind' : REDIS_CONF, 'mode' : 'rw' }
+            redis_dir: {'bind': '/data', 'mode': 'rw'},
+            redis_conf: {'bind': REDIS_CONF, 'mode': 'rw'}
         }
 
         redis_command = 'redis-server {}'.format(REDIS_CONF)
@@ -225,8 +253,8 @@ def _start(temp_dir='/tmp/higlass-docker',
         sys.stderr.write("done\n")
         sys.stderr.flush()
 
-    data_dir = op.expanduser(data_dir)
-    temp_dir = op.expanduser(temp_dir)
+    data_dir = op.realpath(op.expanduser(data_dir))
+    temp_dir = op.realpath(op.expanduser(temp_dir))
 
     if not op.exists(temp_dir):
         os.makedirs(temp_dir)
@@ -244,21 +272,20 @@ def _start(temp_dir='/tmp/higlass-docker',
     sys.stderr.write('Data directory: {}\n'.format(data_dir))
     sys.stderr.write('Temp directory: ()\n'.format(temp_dir))
 
-    hg_version_addition = '' if version is None else ':{}'.format(version)
-
     sys.stderr.write('Starting... {} {}\n'.format(hg_name, port))
-    hg_volumes={
-        temp_dir : { 'bind' : '/tmp', 'mode' : 'rw' },
-        data_dir : { 'bind' : '/data', 'mode' : 'rw' }
+    hg_volumes = {
+        temp_dir: {'bind': '/tmp', 'mode': 'rw'},
+        data_dir: {'bind': '/data', 'mode': 'rw'}
         }
 
-    if media_dir:
-        hg_volumes[media_dir] = { 'bind' : '/media', 'mode' : 'rw' }
+    if media_dir is not None:
+        media_dir = os.realpath(os.expanduser(media_dir))
+        hg_volumes[media_dir] = {'bind': '/media', 'mode': 'rw'}
         hg_environment['HIGLASS_MEDIA_ROOT'] = '/media'
 
     if not use_redis:
         hg_container = client.containers.run(hg_image,
-                                             ports={80 : port},
+                                             ports={80: port},
                                              volumes=hg_volumes,
                                              name=hg_container_name,
                                              environment=hg_environment,
@@ -270,13 +297,13 @@ def _start(temp_dir='/tmp/higlass-docker',
         # run the higlass container on the shared network with the Redis container
         hg_container = client.containers.run(hg_image,
                                              network=network_name,
-                                             ports={80 : port},
+                                             ports={80: port},
                                              volumes=hg_volumes,
                                              name=hg_container_name,
                                              environment=hg_environment,
                                              publish_all_ports=True,
                                              detach=True)
-        
+
     sys.stderr.write('Docker started: {}\n'.format(hg_container_name))
 
     started = False
@@ -285,8 +312,10 @@ def _start(temp_dir='/tmp/higlass-docker',
         try:
             sys.stderr.write("sending request {}\n".format(counter))
             counter += 1
-            req = requests.get('http://localhost:{}/api/v1/viewconfs/?d=default'.format(port), 
-                    timeout=5)
+            req = requests.get(
+                'http://localhost:{}/api/v1/viewconfs/?d=default'.format(port),
+                timeout=5
+            )
             # sys.stderr.write("request returned {} {}\n".format(req.status_code, req.content))
 
             if req.status_code != 200:
@@ -310,8 +339,8 @@ def _start(temp_dir='/tmp/higlass-docker',
 
         sed_command = """bash -c 'cp higlass-app/static/js/main.*.chunk.js higlass-app/static/js/main.{}.chunk.js'""".format(new_hash)
 
-        ret = hg_container.exec_run(sed_command)   
-             
+        ret = hg_container.exec_run(sed_command)
+
     if not public_data:
         config = json.loads(req.content.decode('utf-8'))
         config['trackSourceServers'] = ['/api/v1']
@@ -353,6 +382,5 @@ def _start(temp_dir='/tmp/higlass-docker',
     ret = hg_container.exec_run(sed_command)
     # sys.stderr.write("ret: {}\n".format(ret))
     sys.stderr.write("Replaced js file\n")
-
 
     sys.stderr.write("Started\n")
