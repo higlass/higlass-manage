@@ -1,5 +1,6 @@
 ** Next release
 
+- Better documentation for the --media-dir and --no-upload parameters
 - Ran black on the entire code base
 
 v0.7.3

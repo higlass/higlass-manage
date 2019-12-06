@@ -32,7 +32,9 @@ from higlass_manage.start import _start
     "--no-upload",
     default=None,
     is_flag=True,
-    help="Do not copy the file to the media directory. File must already be in the media directory.",
+    help="Do not copy the file to the media directory. "
+    "File must already be in the media directory and "
+    "the provided path should be relative to the media directory.",
 )
 @click.option(
     "--chromsizes-filename",
