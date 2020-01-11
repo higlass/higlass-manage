@@ -138,6 +138,27 @@ To stop a running instance, use the `stop` command:
 higlass-manage stop
 ```
 
+### Migrating a HiGlass instance
+
+Migrating a higlass instance between different servers can be done by copying the data-folder, typically `hg-data`, from server of origin to the destination and re-starting higlass:
+```bash
+# at the destination:
+scp -r user@origin:/path/to/hg-data  /new/path/
+higlass-manage start --data-dit /new/path/hg-data ...
+```
+Tilesets ingested at the origin would be available at the destination. However, `viewconf`-s saved at the origin would not work at the destination, because the tilesets would be reffered there with original URLs, e.g. `http://server-of-origin.org:port`.
+
+This can be fixed by performing an additional step before copying `hg-data`:
+```bash
+# at the origin:
+higlass-manage migrate  --hg-name name_of_running_higlass_instance --destination-site http://new-server.com
+# or when instance is not running:
+higlass-manage migrate --destination-site http://new-server.com --origin-site http://old-server.com --data-dir
+```
+this would create `db.sqlite3.backup` file in the `/path/to/hg-data`, which should be used instead of `db.sqlite3` upon migration.
+[TO BE CONTINUED ...]
+
+
 ## Development
 
 The following is a list of handy commands when developing HiGlass:
