@@ -65,12 +65,12 @@ def _stop(name):
          " db.sqlite3 database file.",
     required=False,
 )
-def migrate(hg_name,
-            destination_site,
-            destination_port,
-            origin_site,
-            origin_port,
-            data_dir):
+def update_viewconfs(hg_name,
+                    destination_site,
+                    destination_port,
+                    origin_site,
+                    origin_port,
+                    data_dir):
     """
     Prepare database of a given higlass
     container for migration.
