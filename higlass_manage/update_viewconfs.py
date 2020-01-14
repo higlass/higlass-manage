@@ -3,24 +3,23 @@ import click
 import os.path as op
 import sqlite3
 import shutil
+from functools import partial
+import subprocess as sp
 
-from higlass_manage.common import get_data_dir, \
-                                  get_site_url, \
-                                  get_port
+from .common import get_data_dir, \
+                    get_site_url, \
+                    get_port, \
+                    SQLITEDB
 
-_SQLITEDB = "db.sqlite3"
+from .stop import stop
 
-def _stop(name):
-    import docker
-    from higlass_manage.common import CONTAINER_PREFIX
-    client = docker.from_env()
-    # higlass container
-    hm_name = "{}-{}".format(CONTAINER_PREFIX, name)
-    try:
-        client.containers.get(hm_name).stop()
-        # client.containers.get(hm_name).remove()
-    except docker.errors.NotFound as ex:
-        sys.stderr.write("Instance not running: {}\n".format(name))
+
+# stop a collection of higlass containers
+# without removing them or modifying associated
+# redis/networking in any way
+_stop = partial(
+            stop, False, False, False
+        )
 
 
 @click.command()
@@ -50,12 +49,12 @@ def _stop(name):
 @click.option(
     "--old-data-dir",
     help="data directory of the higlass"
-         " that is to be updated."
-         " typically named 'hg-data'."
+         " that is to be updated (usually 'hg-data')."
          " Provide this when higlass container"
          " is not running.",
     required=False,
-)@click.option(
+)
+@click.option(
     "--new-site-url",
     default="http://localhost",
     help="site-url at the new location.",
@@ -75,9 +74,9 @@ def update_viewconfs(old_hg_name,
                     new_site_url,
                     new_port):
     """
-    The script allows one to update viewconfs, saved
+    The script allows one to update viewconfs saved
     in an existing higlass database. It does so
-    by modifying references to tillesets that use
+    by modifying references to tilesets that use
     old-site-url:old-port --> new-site-url:new-port
 
     old/new-site-urls must include schema (http, https):
@@ -131,47 +130,57 @@ def update_viewconfs(old_hg_name,
                         else f"{new_site_url}:{new_port}"
 
     # locate db.sqlite3 and name for the updated version:
-    origin_db_path = op.join(old_data_dir, _SQLITEDB)
-    update_db_path = op.join(old_data_dir, f"{_SQLITEDB}.updated")
+    origin_db_path = op.join(old_data_dir, SQLITEDB)
+    update_db_path = op.join(old_data_dir, f"{SQLITEDB}.updated")
 
-    # to be continued
+    # backup the database as safe as possible ...
+    if old_hg_name is not None:
+        stop([old_hg_name,],False, False, False)
+    try:
+        # this should be a safe way to backup a database:
+        res = sp.run(["sqlite3",origin_db_path,f".backup {update_db_path}"])
+    except OSError as e:
+        sys.stderr.write(
+            "sqlite3 is not installed!"
+            "script will attempt to copy the database file instead."
+            )
+        sys.stderr.flush()
+        # not so safe way to backup a database:
+        shutil.copyfile(origin_db_path, update_db_path)
+    else:
+        # check if sqlite3 actually ran fine:
+        if res.returncode != 0:
+            raise RuntimeError(
+                    "The database backup using sqlite3 exited"
+                    f"with error code {res.returncode}."
+                )
 
-    # stop the container before backup:
-    sys.stderr.write(
-        f"Stopping running higlass-container {old_hg_name} ...\n"
-        )
-    sys.stderr.flush()
-    _stop(hg_name)
-    # hopefully db_location is not in use now ...
-    shutil.copyfile(db_location, db_backup)
 
-
-    # once db_backup is done, we can connect to the DB
+    # once update_db_path is backedup, we can connect to it:
     conn = None
     try:
-        conn = sqlite3.connect(db_backup)
-    except Error as e:
-        print(e)
+        conn = sqlite3.connect(update_db_path)
+    except sqlite3.Error as e:
+        sys.stderr.write(f"Failed to connect to {update_db_path}")
+        sys.exit(-1)
 
-    sql = '''UPDATE tilesets_viewconf
-             SET viewconf = replace(viewconf,
-                     '{_origin}',
-                     '{_destination}')
-          '''.format(_origin = origin,
-                     _destination = destination)
+    # sql query to update viewconfs, by replacing origin -> destination
+    db_query = f'''
+            UPDATE tilesets_viewconf
+            SET viewconf = replace(viewconf,'{origin}','{destination}')
+            '''
+    # exec sql query
+    with conn:
+        cur = conn.cursor()
+        cur.execute(db_query)
 
-    # we probably need to add some reporting ...
-    # how many entries were replaced, etc
-    # should look some place other than "viewconf" table ?!
-
-    cur = conn.cursor()
-    cur.execute(sql)
-    conn.commit()
     conn.close()
-
+    # todo: add some stats on - how many viewconfs
+    # were updated
 
     sys.stderr.write(
-        "DB is ready for migration, just copy db.backup"
-        "along with the ./media to new destination ...\n"
+        f"{update_db_path } has been updated and ready for migration"
+        " copy it to the new host along with the media folder"
+        " rename the database file back to db.sqlite3 and restart higlass."
         )
     sys.stderr.flush()

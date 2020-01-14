@@ -9,6 +9,8 @@ CONTAINER_PREFIX = "higlass-manage-container"
 NETWORK_PREFIX = "higlass-manage-network"
 REDIS_PREFIX = "higlass-manage-redis"
 REDIS_CONF = "/usr/local/etc/redis/redis.conf"
+SQLITEDB = "db.sqlite3"
+
 
 
 def md5(fname):
