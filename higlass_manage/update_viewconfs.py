@@ -24,103 +24,121 @@ def _stop(name):
 
 
 @click.command()
-# @click.argument("hg_name", nargs=-1)
 @click.option(
-    "--hg-name",
+    "--old-hg-name",
     default="default",
-    help="The name of the running-higlass container to migrate",
-)
-@click.option(
-    "--destination-site",
-    default="http://localhost",
-    help="site-url at the destination of migration",
-    required=True,
-    # perhaps use click to check if it's a url
-)
-@click.option(
-    "--destination-port",
-    help="port at the destination of migration",
+    help="The name of the running higlass container"
+         " that needs to be updated.",
     required = False,
-    # should this be str or int - 80 or "" ...
 )
 @click.option(
-    "--origin-site",
-    help="site-url at the origin of migration."
-         " If not provided: the script will calculate"
-         " it from the running higlass-container",
+    "--old-site-url",
+    help="site-url at the old location."
+         " Provide this when higlass container"
+         " one is updating is not running.",
     required=False,
-    # perhaps use click to check if it's a url
 )
 @click.option(
-    "--origin-port",
-    help="port at the origin of migration."
-         " If not provided: the script will calculate"
-         " it from the running higlass-container",
+    "--old-port",
+    help="port at the old location."
+         " Provide this when higlass container"
+         " one is updating is not running.",
     required=False,
-    # perhaps use click to check if it is an int with range
+    default="80",
+    type=str,
 )
 @click.option(
-    "--data-dir",
-    help="The higlass data directory to look"
-         " db.sqlite3 database file.",
+    "--old-data-dir",
+    help="data directory of the higlass"
+         " that is to be updated."
+         " typically named 'hg-data'."
+         " Provide this when higlass container"
+         " is not running.",
     required=False,
+)@click.option(
+    "--new-site-url",
+    default="http://localhost",
+    help="site-url at the new location.",
+    required=True
 )
-def update_viewconfs(hg_name,
-                    destination_site,
-                    destination_port,
-                    origin_site,
-                    origin_port,
-                    data_dir):
+@click.option(
+    "--new-port",
+    help="port at the new location",
+    required = False,
+    default="80",
+    type=str,
+)
+def update_viewconfs(old_hg_name,
+                    old_site_url,
+                    old_port,
+                    old_data_dir,
+                    new_site_url,
+                    new_port):
     """
-    Prepare database of a given higlass
-    container for migration.
+    The script allows one to update viewconfs, saved
+    in an existing higlass database. It does so
+    by modifying references to tillesets that use
+    old-site-url:old-port --> new-site-url:new-port
 
-    Backup current database.
-    Create a new version of the database,
-    where URLs of current tileset are going
-    to be replace with the user-provided
-    destination URL.
+    old/new-site-urls must include schema (http, https):
+    http://localhost
+    http://old.host.org
+    ...
 
-    (relevant for keeping existing viewconf
-    functional after migration, might be
-    important for other items).
+    if 'old-hg-name' is provided and higlass is running,
+    then 'old-site-url,old-port,old-data-dir' are inferred.
+
+    if 'old-hg-name' is NOT provided
+    then at least 'old-site-url'and 'old-data-dir'
+    are required.
+
+    Post 80 is default http port and both
+    new-port and old-port defaults to it,
+    if not specified otherwise.
+    site-url:80 is equivalent to site-url
+
+    Script keeps existing database unchanged,
+    but modifies a backed up version "db.sqlite3.updated"
+    located in the same path as the original one.
+
+    Running higlass-container would be stopped by
+    update_viewconfs.
+
     """
 
-    # ORIGIN and --data-dir:
-    if hg_name is not None:
+    # update viewconfs FROM (ORIGIN):
+    if old_hg_name is not None:
         # then the container must be running
         try:
-            origin_site = get_site_url(hg_name)
-            origin_port = get_port(hg_name)
-            data_dir = get_data_dir(hg_name)
+            old_site_url = get_site_url(old_hg_name)
+            old_port = get_port(old_hg_name)
+            old_data_dir = get_data_dir(old_hg_name)
         except docker.errors.NotFound as ex:
-            sys.stderr.write("Instance not running: {}\n".format(hg_name))
-    elif (origin_site is None) or (data_dir is None):
+            sys.stderr.write(f"Instance not running: {old_hg_name}\n")
+    elif (old_site_url is None) or (old_data_dir is None):
         raise ValueError(
-            "origin-site and data-dir must be provided, when instance is not running\n"
+            "old-site-url and old-data-dir must be provided,"
+            " when instance is not running and no old-hg-name is provided\n"
             )
 
-    origin_port = "80" if (origin_port is None) else str(origin_port)
     # define origin as site_url:port or site_url (when 80)
-    origin = origin_site if (origin_port == "80") \
-                        else f"{origin_site}:{origin_port}"
+    origin = old_site_url if (old_port == "80") \
+                        else f"{old_site_url}:{old_port}"
 
-    # DESTINATION:
-    if destination_port is None:
-        sys.stderr.write("destination port was not set, using 80 ...\n")
-        sys.stderr.flush()
-        destination_port = "80"
+    # update viewconfs TO (DESTINATION):
     # define destination as site_url:port or site_url (when 80)
-    destination = destination_site if (destination_port == "80") \
-                        else f"{destination_site}:{destination_port}"
+    destination = new_site_url if (new_port == "80") \
+                        else f"{new_site_url}:{new_port}"
 
-    # locate db.sqlite3 and name for its backup:
-    db_location = op.join(data_dir, _SQLITEDB)
-    db_backup = op.join(data_dir, f"{_SQLITEDB}.backup")
+    # locate db.sqlite3 and name for the updated version:
+    origin_db_path = op.join(old_data_dir, _SQLITEDB)
+    update_db_path = op.join(old_data_dir, f"{_SQLITEDB}.updated")
+
+    # to be continued
 
     # stop the container before backup:
     sys.stderr.write(
-        "Stopping running higlass-container {} ...\n".format(hg_name)
+        f"Stopping running higlass-container {old_hg_name} ...\n"
         )
     sys.stderr.flush()
     _stop(hg_name)
