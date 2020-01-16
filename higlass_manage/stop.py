@@ -29,10 +29,27 @@ from .common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX
          " associated with a given higlass"
          " instance.",
 )
-def stop(names,
+def stop(
+    names,
+    remove_container,
+    stop_redis,
+    remove_network_bridge,
+):
+    _stop(
+        names,
         remove_container,
         stop_redis,
-        remove_network_bridge):
+        remove_network_bridge,
+    )
+
+
+
+def _stop(
+        names,
+        remove_container=True,
+        stop_redis=True,
+        remove_network_bridge=True,
+    ):
     """
     Stop a running higlass instance along with the
     associated redis container and network bridges.

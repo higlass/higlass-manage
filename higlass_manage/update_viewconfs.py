@@ -6,26 +6,19 @@ import shutil
 from functools import partial
 import subprocess as sp
 
-from .common import get_data_dir, \
-                    get_site_url, \
-                    get_port, \
-                    SQLITEDB
+from .common import (
+    get_data_dir,
+    get_site_url,
+    get_port,
+    SQLITEDB
+)
 
-from .stop import stop
-
-
-# stop a collection of higlass containers
-# without removing them or modifying associated
-# redis/networking in any way
-_stop = partial(
-            stop, False, False, False
-        )
+from .stop import _stop
 
 
 @click.command()
 @click.option(
     "--old-hg-name",
-    default="default",
     help="The name of the running higlass container"
          " that needs to be updated.",
     required = False,
@@ -133,9 +126,9 @@ def update_viewconfs(old_hg_name,
     origin_db_path = op.join(old_data_dir, SQLITEDB)
     update_db_path = op.join(old_data_dir, f"{SQLITEDB}.updated")
 
-    # backup the database as safe as possible ...
+    # backup the database in a safest way possible ...
     if old_hg_name is not None:
-        stop([old_hg_name,],False, False, False)
+        _stop([old_hg_name,],False, False, False)
     try:
         # this should be a safe way to backup a database:
         res = sp.run(["sqlite3",origin_db_path,f".backup {update_db_path}"])
@@ -154,6 +147,10 @@ def update_viewconfs(old_hg_name,
                     "The database backup using sqlite3 exited"
                     f"with error code {res.returncode}."
                 )
+
+    # it would be great to restart the instance after backup ...
+    # consider re-using _start with all the parameters inferred from
+    # old-hg-name ...
 
 
     # once update_db_path is backedup, we can connect to it:
