@@ -148,23 +148,19 @@ higlass-manage start --data-dir /new/path/hg-data ...
 ```
 Tilesets ingested at the origin would be available at the destination. However, `viewconf`-s saved at the origin would not work at the destination, because the tilesets would be reffered there with original URLs, e.g. `http://old.server.org:PORT`.
 
-This can be fixed by updating `viewconfs` in the database before or after copying `hg-data`:
+This can be fixed by updating `viewconfs` in the database before copying `hg-data`:
 ```bash
-# before copying data, i.,e. at the old.host.org:
+# at the old.host.org:
 higlass-manage update-viewconfs --hg-name-old old_hg_name --new-site-url http://new.host.org
-# after copying data and restarting new higlass, i.,e. at the new.host.org:
-higlass-manage update-viewconfs --hg-name-new new_hg_name --old-site-url http://new-server.com
 ```
-in the first case, running higlass instance `old_hg_name` would be used to infer old site URL, port and path to the data folder, while in the second case `new_hg_name` instance would be used to infer new site URL, port and path to the data folder.
+in this case, higlass instance `old_hg_name` would be used to infer old site URL, port and path to the data folder.
 
-Same effect can be achieved even without any running higlass instances, but then one has to provide path to the data folder and site's URL and port both "new" and "old":
+Same can be achieved even without any running higlass instances, but then one has to provide path to the data folder and site's URL and port both "new" and "old":
 ```bash
-# before copying data, i.,e. at the old.host.org:
+# at the old.host.org:
 higlass-manage update-viewconfs --old-site-url http://old.host.org --data-dir /old/path/to/data --new-site-url http://new.host.org
-# after copying data and restarting new higlass, i.,e. at the new.host.org:
-higlass-manage update-viewconfs --old-site-url http://old.host.org --data-dir /new/path/to/data --new-site-url http://new.host.org
 ```
-`update-viewconfs` would backup existing database as `/old/path/to/data/db.sqlite3.backup` or `/new/path/to/data/db.sqlite3.backup` and update viewconfs in the corresponding `db.sqlite3`. Thus, restarting higlass would use already updated `viewconfs`.
+`update-viewconfs` would save updated database as `/old/path/to/data/db.sqlite3.updated` and keep the original `/old/path/to/data/db.sqlite3` unchanged. Thus, `db.sqlite3.updated` has to be renamed to `db.sqlite3` after migrating to `new.host.org`.
 
 
 ## Development
