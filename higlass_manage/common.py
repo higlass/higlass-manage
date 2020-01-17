@@ -12,7 +12,6 @@ REDIS_CONF = "/usr/local/etc/redis/redis.conf"
 SQLITEDB = "db.sqlite3"
 
 
-
 def md5(fname):
     hash_md5 = hashlib.md5()
     with open(fname, "rb") as f:
@@ -42,7 +41,8 @@ def get_port(hg_name):
 
     return port
 
-def get_site_url(hg_name, _SITE_URL = "SITE_URL"):
+
+def get_site_url(hg_name, _SITE_URL="SITE_URL"):
     """
     get SITE_URL for a given container
     using container docker-config, assuming
@@ -65,15 +65,13 @@ def get_site_url(hg_name, _SITE_URL = "SITE_URL"):
     # otherwise there has to be only one SITE_URL entry in the Env:
     elif len(site_url_entries) > 1:
         raise ValueError(
-                "There are multiple SITE_URL entry in {} env".\
-                format(container_name)
-                )
+            "There are multiple SITE_URL entry in {} env".format(container_name)
+        )
     else:
-        site_url, = site_url_entries
+        (site_url,) = site_url_entries
         # parse "SITE_URL=http://hostname":
         _, site_url = site_url.split("=")
         return site_url
-
 
 
 def fill_filetype_and_datatype(filename, filetype, datatype):

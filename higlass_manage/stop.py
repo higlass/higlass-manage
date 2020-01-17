@@ -18,38 +18,26 @@ from .common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX
     default=True,
     show_default=True,
     help="Stop and remove redis container"
-         " associated with a given higlass"
-         " instance.",
+    " associated with a given higlass"
+    " instance.",
 )
 @click.option(
     "--remove-network-bridge/--dont-remove-network-bridge",
     default=True,
     show_default=True,
-    help="Remove netowrk bridge"
-         " associated with a given higlass"
-         " instance.",
+    help="Remove netowrk bridge associated with a given higlass instance.",
 )
 def stop(
-    names,
-    remove_container,
-    stop_redis,
-    remove_network_bridge,
+    names, remove_container, stop_redis, remove_network_bridge,
 ):
     _stop(
-        names,
-        remove_container,
-        stop_redis,
-        remove_network_bridge,
+        names, remove_container, stop_redis, remove_network_bridge,
     )
 
 
-
 def _stop(
-        names,
-        remove_container=True,
-        stop_redis=True,
-        remove_network_bridge=True,
-    ):
+    names, remove_container=True, stop_redis=True, remove_network_bridge=True,
+):
     """
     Stop a running higlass instance along with the
     associated redis container and network bridges.
