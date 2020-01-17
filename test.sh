@@ -62,6 +62,21 @@ start wait
         || die
 end wait
 
+
+start update-viewconfs
+    # if I understand correctly "test-hg" is still alive by now !
+    # so we'll use it to test "update-viewconfs":
+    URL="http://localhost:$PORT/api/v1/viewconfs/"
+    # 1) post viewconf - to simulate a viewconf saved as a link ...
+    curl -d "@data/test_viewconf.json" -X POST ${URL}
+    # 2) once "test-123" viewconf is on server-side, i.e. in the "${TMPDIR}/test-hg-data/db.sqlite3"
+    higlass-manage update-viewconfs --old-hg-name test-hg --new-site-url new.host.org
+    # 3) now "${TMPDIR}/test-hg-data/db.sqlite3.updated" should become available, with new.host.org instead
+    sqlite3 ${TMPDIR}/test-hg-data/db.sqlite3.updated \
+        "SELECT viewconf FROM tilesets_viewconf WHERE uuid='test-123'" | grep new.host.org \
+        || die
+end update-viewconfs
+
 start cleanup
     higlass-manage stop test-hg
 end cleanup
