@@ -146,7 +146,7 @@ Migrating a higlass instance between different servers can be done by copying th
 scp -r user@old.host.org:/path/to/hg-data  /new/path/
 higlass-manage start --data-dir /new/path/hg-data ...
 ```
-Tilesets ingested at the origin would be available at the destination. However, `viewconf`-s saved at the origin would not work at the destination, because the tilesets would be reffered there with original URLs, e.g. `http://old.server.org:PORT`.
+Tilesets ingested at the origin would be available at the destination. However, `viewconf`-s saved at the origin would not work at the destination, because the tilesets would be referred there with original URLs, e.g. `http://old.server.org:PORT`.
 
 This can be fixed by updating `viewconfs` in the database before copying `hg-data`:
 ```bash
