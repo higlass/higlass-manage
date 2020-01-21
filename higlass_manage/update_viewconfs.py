@@ -3,10 +3,9 @@ import click
 import os.path as op
 import sqlite3
 import shutil
-from functools import partial
-import subprocess as sp
+import docker
 
-from .common import get_data_dir, get_site_url, get_port, SQLITEDB
+from .common import get_data_dir, get_site_url, get_port, SQLITEDB, CONTAINER_PREFIX
 
 from .stop import _stop
 
@@ -115,38 +114,37 @@ def update_viewconfs(
     origin_db_path = op.join(old_data_dir, SQLITEDB)
     update_db_path = op.join(old_data_dir, f"{SQLITEDB}.updated")
 
-    # backup the database in a safest way possible ...
+    # backup the database using simple copyfile, stop container before
     if old_hg_name is not None:
         _stop([old_hg_name,], False, False, False)
     try:
-        # this should be a safe way to backup a database:
-        res = sp.run(["sqlite3", origin_db_path, f".backup {update_db_path}"])
-    except OSError as e:
-        sys.stderr.write(
-            "sqlite3 is not installed!"
-            "script will attempt to copy the database file instead."
-        )
-        sys.stderr.flush()
-        # not so safe way to backup a database:
         shutil.copyfile(origin_db_path, update_db_path)
-    else:
-        # check if sqlite3 actually ran fine:
-        if res.returncode != 0:
-            raise RuntimeError(
-                "The database backup using sqlite3 exited"
-                f"with error code {res.returncode}."
-            )
+    except (OSError, IOError):
+        sys.stderr.write(f"Failed to copy {origin_db_path} to {update_db_path}")
+        sys.exit(-1)
+    finally:
+        # restart container even if exception occurs:
+        if old_hg_name is not None:
+            sys.stderr.write(f"Restarting container {old_hg_name} ...\n")
+            sys.stderr.flush()
+            _name = "{}-{}".format(CONTAINER_PREFIX, old_hg_name)
+            client = docker.from_env()
+            client.containers.get(_name).restart()
+    # alternatively database could be backed up using a "backup"-mechanism:
+    # CLI
+    #    res = subprocess.run(["sqlite3", origin_db_path, f".backup {update_db_path}"])
+    # Python API >= 3.7.0
+    #       conn = sqlite3.connect(origin_db_path)
+    #       conn.backup(update_db_path)
+    # check if it is indeed "atomic" and can be done on a "live" database .
 
-    # it would be great to restart the instance after backup ...
-    # consider re-using _start with all the parameters inferred from
-    # old-hg-name ...
 
-    # once update_db_path is backedup, we can connect to it:
+    # now modify the backed-up database "update_db_path" using sqlite3 API:
     conn = None
     try:
         conn = sqlite3.connect(update_db_path)
     except sqlite3.Error as e:
-        sys.stderr.write(f"Failed to connect to {update_db_path}")
+        sys.stderr.write(f"Failed to connect to {update_db_path}\n")
         sys.exit(-1)
 
     # sql query to update viewconfs, by replacing origin -> destination
@@ -164,8 +162,8 @@ def update_viewconfs(
     # were updated
 
     sys.stderr.write(
-        f"{update_db_path } has been updated and ready for migration"
-        " copy it to the new host along with the media folder"
-        " rename the database file back to db.sqlite3 and restart higlass."
+        f"{update_db_path } has been updated and ready for migration\n"
+        " copy it to the new host along with the media folder\n"
+        " rename the database file back to db.sqlite3 and restart higlass.\n"
     )
     sys.stderr.flush()
