@@ -1,3 +1,4 @@
+pysam
 clodius==0.14.0
 higlass-python==0.1.13
 docker==4.0.2
