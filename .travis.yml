@@ -13,9 +13,9 @@ before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda update --yes conda
   - conda install -c bioconda pysam
   # Prefer stability to having the latest
-  #- conda update --yes conda
 
 install:
   - conda install -c conda-forge --yes python=$TRAVIS_PYTHON_VERSION scipy
