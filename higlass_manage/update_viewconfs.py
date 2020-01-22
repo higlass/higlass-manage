@@ -5,7 +5,13 @@ import sqlite3
 import shutil
 import docker
 
-from .common import get_data_dir, get_site_url, get_port, SQLITEDB, CONTAINER_PREFIX
+from .common import (
+    get_data_dir,
+    get_site_url,
+    get_port,
+    hg_name_to_container_name,
+    SQLITEDB,
+)
 
 from .stop import _stop
 
@@ -53,8 +59,24 @@ from .stop import _stop
     default="80",
     type=str,
 )
+@click.option(
+    "--db-backup-name",
+    help="name of the database (db) backup file."
+    " db backup will be stored in the data directory"
+    " provided explicitly or inferred from running"
+    " container.",
+    required=False,
+    default=f"{SQLITEDB}.updated",
+    type=str,
+)
 def update_viewconfs(
-    old_hg_name, old_site_url, old_port, old_data_dir, new_site_url, new_port
+    old_hg_name,
+    old_site_url,
+    old_port,
+    old_data_dir,
+    new_site_url,
+    new_port,
+    db_backup_name,
 ):
     """
     The script allows one to update viewconfs saved
@@ -72,7 +94,9 @@ def update_viewconfs(
 
     if 'old-hg-name' is NOT provided
     then at least 'old-site-url'and 'old-data-dir'
-    are required.
+    are required. This scenario should be invoked
+    only when the container is not running, otherwise
+    integrity of the DB-backup can not be guaranteed.
 
     Post 80 is default http port and both
     new-port and old-port defaults to it,
@@ -80,11 +104,11 @@ def update_viewconfs(
     site-url:80 is equivalent to site-url
 
     Script keeps existing database unchanged,
-    but modifies a backed up version "db.sqlite3.updated"
-    located in the same path as the original one.
+    but modifies a backed up version located
+    in the same path as the original one.
 
-    Running higlass-container would be stopped by
-    update_viewconfs.
+    Running higlass-container would be interrupted
+    during database backup.
 
     """
 
@@ -112,7 +136,7 @@ def update_viewconfs(
 
     # locate db.sqlite3 and name for the updated version:
     origin_db_path = op.join(old_data_dir, SQLITEDB)
-    update_db_path = op.join(old_data_dir, f"{SQLITEDB}.updated")
+    update_db_path = op.join(old_data_dir, db_backup_name)
 
     # backup the database using simple copyfile, stop container before
     if old_hg_name is not None:
@@ -127,9 +151,9 @@ def update_viewconfs(
         if old_hg_name is not None:
             sys.stderr.write(f"Restarting container {old_hg_name} ...\n")
             sys.stderr.flush()
-            _name = "{}-{}".format(CONTAINER_PREFIX, old_hg_name)
             client = docker.from_env()
-            client.containers.get(_name).restart()
+            container_name = hg_name_to_container_name(old_hg_name)
+            client.containers.get(container_name).restart()
     # alternatively database could be backed up using a "backup"-mechanism:
     # CLI
     #    res = subprocess.run(["sqlite3", origin_db_path, f".backup {update_db_path}"])
@@ -137,7 +161,6 @@ def update_viewconfs(
     #       conn = sqlite3.connect(origin_db_path)
     #       conn.backup(update_db_path)
     # check if it is indeed "atomic" and can be done on a "live" database .
-
 
     # now modify the backed-up database "update_db_path" using sqlite3 API:
     conn = None
@@ -162,8 +185,10 @@ def update_viewconfs(
     # were updated
 
     sys.stderr.write(
-        f"{update_db_path } has been updated and ready for migration\n"
+        f"Backedup version of the database {update_db_path}\n"
+        " has been updated and ready for migration\n\n"
         " copy it to the new host along with the media folder\n"
-        " rename the database file back to db.sqlite3 and restart higlass.\n"
+        f" rename the database file back to {SQLITEDB} and restart higlass.\n"
     )
     sys.stderr.flush()
+    sys.exit(0)
