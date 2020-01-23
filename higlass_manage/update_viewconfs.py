@@ -185,7 +185,7 @@ def update_viewconfs(
     # were updated
 
     sys.stderr.write(
-        f"Backedup version of the database {update_db_path}\n"
+        f"Backed up version of the database {update_db_path}\n"
         " has been updated and ready for migration\n\n"
         " copy it to the new host along with the media folder\n"
         f" rename the database file back to {SQLITEDB} and restart higlass.\n"
