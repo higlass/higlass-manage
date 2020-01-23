@@ -25,7 +25,7 @@ from .common import CONTAINER_PREFIX, NETWORK_PREFIX, REDIS_PREFIX
     "--remove-network-bridge/--dont-remove-network-bridge",
     default=True,
     show_default=True,
-    help="Remove netowrk bridge associated with a given higlass instance.",
+    help="Remove network bridge associated with a given higlass instance.",
 )
 def stop(
     names, remove_container, stop_redis, remove_network_bridge,
