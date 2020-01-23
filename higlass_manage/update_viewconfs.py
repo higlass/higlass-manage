@@ -33,7 +33,7 @@ from .stop import _stop
     "--old-port",
     help="port at the old location."
     " Provide this when higlass container"
-    " one is updating is not running.",
+    " to be updated is not running.",
     required=False,
     default="80",
     type=str,
