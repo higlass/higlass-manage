@@ -26,7 +26,7 @@ from .stop import _stop
     "--old-site-url",
     help="site-url at the old location."
     " Provide this when higlass container"
-    " one is updating is not running.",
+    " to be updated is not running.",
     required=False,
 )
 @click.option(
