@@ -63,7 +63,7 @@ from .stop import _stop
     "--db-backup-name",
     help="name of the database (db) backup file."
     " db backup will be stored in the data directory"
-    " provided explicitly or inferred from running"
+    " provided explicitly or inferred from the running"
     " container.",
     required=False,
     default=f"{SQLITEDB}.updated",
