@@ -19,24 +19,51 @@ from higlass_manage.common import tileset_uuid_by_filename
 from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
+
 @click.command()
-@click.argument('filename', nargs=1)
-@click.option('-n', '--hg-name',
-        default='default',
-        help='The name for this higlass instance',
-        type=str)
-@click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
-@click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
-@click.option('--tracktype', default=None, help="The track type used to view this file")
-@click.option('--position', default=None, help="The position in the view to place this track")
-@click.option('--public-data/--no-public-data',
-        default=True,
-        help='Include or exclude public data in the list of available tilesets')
-@click.option('--assembly', default=None, help="The assembly that this data is mapped to")
-@click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data,
-        assembly, chromsizes_filename):
-    '''
+@click.argument("filename", nargs=1)
+@click.option(
+    "-n",
+    "--hg-name",
+    default="default",
+    help="The name for this higlass instance",
+    type=str,
+)
+@click.option(
+    "--filetype", default=None, help="The type of file to ingest (e.g. cooler)"
+)
+@click.option(
+    "--datatype", default=None, help="The data type of in the input file (e.g. matrix)"
+)
+@click.option("--tracktype", default=None, help="The track type used to view this file")
+@click.option(
+    "--position", default=None, help="The position in the view to place this track"
+)
+@click.option(
+    "--public-data/--no-public-data",
+    default=True,
+    help="Include or exclude public data in the list of available tilesets",
+)
+@click.option(
+    "--assembly", default=None, help="The assembly that this data is mapped to"
+)
+@click.option(
+    "--chromsizes-filename",
+    default=None,
+    help="A set of chromosome sizes to use for bed and bedpe files",
+)
+def view(
+    filename,
+    hg_name,
+    filetype,
+    datatype,
+    tracktype,
+    position,
+    public_data,
+    assembly,
+    chromsizes_filename,
+):
+    """
     View a file in higlass.
 
     The user can specify an instance to view it in. If one is
@@ -49,7 +76,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         The name of the higlass instance
     filename: string
         The name of the file to view
-    '''
+    """
     try:
         temp_dir = get_temp_dir(hg_name)
         print("temp_dir:", temp_dir)
@@ -66,20 +93,27 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     uuid = None
 
     # guess filetype and datatype if they're None
-    (filetype, inferred_datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
+    (filetype, inferred_datatype) = fill_filetype_and_datatype(
+        filename, filetype, datatype
+    )
 
     if filetype is None or inferred_datatype is None:
-        print("Couldn't infer filetype or datatype ({}, {}),".format(filetype, inferred_datatype),
-              "please specify them using the command line options", file=sys.stderr)
+        print(
+            "Couldn't infer filetype or datatype ({}, {}),".format(
+                filetype, inferred_datatype
+            ),
+            "please specify them using the command line options",
+            file=sys.stderr,
+        )
         return
 
     url = False
-    if filename[:7] == 'http://' or filename[:8] == 'https://':
+    if filename[:7] == "http://" or filename[:8] == "https://":
         url = True
 
-    if url and filetype != 'bam':
+    if url and filetype != "bam":
         print("Only bam files can be specified as urls", tile=sys.stderr)
-        return;
+        return
 
     if url:
         uuid = tileset_uuid_by_exact_filepath(hg_name, filename)
@@ -88,8 +122,15 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name, filetype, datatype, assembly=assembly,
-                chromsizes_filename=chromsizes_filename, url=url)
+        uuid = _ingest(
+            filename,
+            hg_name,
+            filetype,
+            datatype,
+            assembly=assembly,
+            chromsizes_filename=chromsizes_filename,
+            url=url,
+        )
 
     if uuid is None:
         # couldn't ingest the file
@@ -107,50 +148,52 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
-    view = View([
-        Track(track_type=tracktype, position=position,
-              tileset_uuid=uuid,
-              server='http://localhost:{}/api/v1/'.format(port),
-              height=200),
-    ])
-
-    viewconf = ViewConf(
-        [view]
+    view = View(
+        [
+            Track(
+                track_type=tracktype,
+                position=position,
+                tileset_uuid=uuid,
+                server="http://localhost:{}/api/v1/".format(port),
+                height=200,
+            )
+        ]
     )
+
+    viewconf = ViewConf([view])
 
     conf = viewconf.to_dict()
 
-    if filetype == 'bam' and url:
-        track = conf['views'][0]['tracks']['top'][0]
-        del track['tilesetUid']
-        del track['server']
-        track['data'] = {
-            'type': 'bam',
-            'url': filename,
-        }
+    if filetype == "bam" and url:
+        track = conf["views"][0]["tracks"]["top"][0]
+        del track["tilesetUid"]
+        del track["server"]
+        track["data"] = {"type": "bam", "url": filename}
 
-        conf['views'][0]['tracks']['top'].insert(0, {"type": "top-axis"})
+        conf["views"][0]["tracks"]["top"].insert(0, {"type": "top-axis"})
         # create a smaller viewport so that people can see their reads
-        conf['views'][0]['initialXDomain'] = [0, 40000]
+        conf["views"][0]["initialXDomain"] = [0, 40000]
 
-    conf['trackSourceServers'] = []
-    conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
+    conf["trackSourceServers"] = []
+    conf["trackSourceServers"] += ["http://localhost:{}/api/v1/".format(port)]
 
     if public_data:
-        conf['trackSourceServers'] += ['http://higlass.io/api/v1/']
+        conf["trackSourceServers"] += ["http://higlass.io/api/v1/"]
 
     # uplaod the viewconf
-    res = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port),
-            json={'viewconf': conf})
+    res = requests.post(
+        "http://localhost:{}/api/v1/viewconfs/".format(port), json={"viewconf": conf}
+    )
 
     if res.status_code != 200:
         print("Error posting viewconf:", res.status, res.content)
         return
 
-    uid = json.loads(res.content)['uid']
+    uid = json.loads(res.content)["uid"]
 
     # make sure this test passes on Travis CI and doesn't try to open
     # a terminal-based browser which doesn't return
-    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
-        webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
-            port=port, uid=uid))
+    if not os.environ.get("HAS_JOSH_K_SEAL_OF_APPROVAL"):
+        webbrowser.open(
+            "http://localhost:{port}/app/?config={uid}".format(port=port, uid=uid)
+        )
