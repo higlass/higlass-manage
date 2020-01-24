@@ -78,7 +78,8 @@ def update_viewconfs(
     new_port,
     db_backup_name,
 ):
-    """
+    """Update stored viewconfs from one host to another
+
     The script allows one to update viewconfs saved
     in an existing higlass database. It does so
     by modifying references to tilesets that use

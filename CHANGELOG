@@ -1,6 +1,7 @@
-** Next release
+v0.8.0
 
 - Ran black on the entire code base
+- Added update_viewconfs command
 
 v0.7.3
 
