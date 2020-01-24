@@ -107,6 +107,7 @@ def _ingest(
         and not no_upload
         and (not op.exists(filename) and not op.islink(filename))
     ):
+    if not no_upload and (not op.exists(filename) and not op.islink(filename)):
         print("File not found:", filename, file=sys.stderr)
         return None
 

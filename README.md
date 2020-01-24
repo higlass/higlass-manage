@@ -138,6 +138,31 @@ To stop a running instance, use the `stop` command:
 higlass-manage stop
 ```
 
+### Migrating a HiGlass instance
+
+Migrating a higlass instance between different servers can be done by copying the data-folder, typically `hg-data`, from server of origin to the destination and re-starting higlass:
+```bash
+# at the destination:
+scp -r user@old.host.org:/path/to/hg-data  /new/path/
+higlass-manage start --data-dir /new/path/hg-data ...
+```
+Tilesets ingested at the origin would be available at the destination. However, `viewconf`-s saved at the origin would not work at the destination, because the tilesets would be referred there with original URLs, e.g. `http://old.server.org:PORT`.
+
+This can be fixed by updating `viewconfs` in the database before copying `hg-data`:
+```bash
+# at the old.host.org:
+higlass-manage update-viewconfs --hg-name-old old_hg_name --new-site-url http://new.host.org
+```
+in this case, higlass instance `old_hg_name` would be used to infer old site URL, port and path to the data folder.
+
+Same can be achieved even without any running higlass instances, but then one has to provide path to the data folder and site's URL and port both "new" and "old":
+```bash
+# at the old.host.org:
+higlass-manage update-viewconfs --old-site-url http://old.host.org --data-dir /old/path/to/data --new-site-url http://new.host.org
+```
+`update-viewconfs` would save updated database as `/old/path/to/data/db.sqlite3.updated` and keep the original `/old/path/to/data/db.sqlite3` unchanged. Thus, `db.sqlite3.updated` has to be renamed to `db.sqlite3` after migrating to `new.host.org`.
+
+
 ## Development
 
 The following is a list of handy commands when developing HiGlass:
