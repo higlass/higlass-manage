@@ -9,6 +9,7 @@ CONTAINER_PREFIX = "higlass-manage-container"
 NETWORK_PREFIX = "higlass-manage-network"
 REDIS_PREFIX = "higlass-manage-redis"
 REDIS_CONF = "/usr/local/etc/redis/redis.conf"
+SQLITEDB = "db.sqlite3"
 
 
 def md5(fname):
@@ -39,6 +40,38 @@ def get_port(hg_name):
     port = config["HostConfig"]["PortBindings"]["80/tcp"][0]["HostPort"]
 
     return port
+
+
+def get_site_url(hg_name, _SITE_URL="SITE_URL"):
+    """
+    get SITE_URL for a given container
+    using container docker-config, assuming
+    there is not more than one SITE_URL in
+    container's env.
+
+    Yields "localhost" when no SITE_URL entries
+    detected.
+    """
+
+    client = docker.from_env()
+
+    container_name = hg_name_to_container_name(hg_name)
+    config = client.api.inspect_container(container_name)
+
+    site_url_entries = [s for s in config["Config"]["Env"] if _SITE_URL in s]
+    # if there is no SITE_URL entry yield "localhost"
+    if not site_url_entries:
+        return "http://localhost"
+    # otherwise there has to be only one SITE_URL entry in the Env:
+    elif len(site_url_entries) > 1:
+        raise ValueError(
+            "There are multiple SITE_URL entry in {} env".format(container_name)
+        )
+    else:
+        (site_url,) = site_url_entries
+        # parse "SITE_URL=http://hostname":
+        _, site_url = site_url.split("=")
+        return site_url
 
 
 def fill_filetype_and_datatype(filename, filetype, datatype):
