@@ -47,7 +47,7 @@ def find_free_port():
 )
 @click.option(
     "--public-data/--no-public-data",
-    default=False,
+    default=True,
     help="Include or exclude public data in the list of available tilesets",
 )
 @click.option(
