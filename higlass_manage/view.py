@@ -1,12 +1,18 @@
 import click
+
+from contextlib import closing
+
 import json
 import ntpath
 import os
 import os.path as op
 import requests
+import socket
 import sys
 import webbrowser
 
+
+from higlass_manage.common import CONTAINER_PREFIX
 from higlass_manage.common import fill_filetype_and_datatype
 from higlass_manage.common import get_port
 from higlass_manage.common import get_data_dir
@@ -20,15 +26,15 @@ from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
 
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
 @click.command()
 @click.argument("filename", nargs=1)
-@click.option(
-    "-n",
-    "--hg-name",
-    default="default",
-    help="The name for this higlass instance",
-    type=str,
-)
 @click.option(
     "--filetype", default=None, help="The type of file to ingest (e.g. cooler)"
 )
@@ -41,7 +47,7 @@ from higlass_manage.ingest import _ingest
 )
 @click.option(
     "--public-data/--no-public-data",
-    default=True,
+    default=False,
     help="Include or exclude public data in the list of available tilesets",
 )
 @click.option(
@@ -54,7 +60,6 @@ from higlass_manage.ingest import _ingest
 )
 def view(
     filename,
-    hg_name,
     filetype,
     datatype,
     tracktype,
@@ -77,11 +82,13 @@ def view(
     filename: string
         The name of the file to view
     """
+    port = find_free_port()
+    hg_name = "viewer"
+
     try:
-        temp_dir = get_temp_dir(hg_name)
-        print("temp_dir:", temp_dir)
+        get_temp_dir(hg_name)
     except Exception:
-        _start(hg_name=hg_name)
+        _start(hg_name=hg_name, media_dir="/", port=port)
 
     # check if we have a running instance
     # if not, start one
@@ -115,22 +122,19 @@ def view(
         print("Only bam files can be specified as urls", tile=sys.stderr)
         return
 
-    if url:
-        uuid = tileset_uuid_by_exact_filepath(hg_name, filename)
-    else:
-        uuid = tileset_uuid_by_filename(hg_name, filename)
+    # always ingest since we're just linking the file
+    # don't need to keep track of whether it's in the DB
 
-    if uuid is None:
-        # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(
-            filename,
-            hg_name,
-            filetype,
-            datatype,
-            assembly=assembly,
-            chromsizes_filename=chromsizes_filename,
-            url=url,
-        )
+    uuid = _ingest(
+        op.join("/media", op.relpath(op.abspath(filename), "/")),
+        hg_name,
+        filetype,
+        datatype,
+        assembly=assembly,
+        chromsizes_filename=chromsizes_filename,
+        url=url,
+        no_upload=True,
+    )
 
     if uuid is None:
         # couldn't ingest the file

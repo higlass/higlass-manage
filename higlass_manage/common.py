@@ -1,5 +1,7 @@
 import docker
 import hashlib
+import json
+import logging
 import os
 import os.path as op
 import requests
@@ -11,6 +13,8 @@ NETWORK_PREFIX = "higlass-manage-network"
 REDIS_PREFIX = "higlass-manage-redis"
 REDIS_CONF = "/usr/local/etc/redis/redis.conf"
 SQLITEDB = "db.sqlite3"
+
+logger = logging.getLogger()
 
 
 def md5(fname):
@@ -224,12 +228,14 @@ def tileset_uuid_by_exact_filepath(hg_name, filepath):
 
 
 def tileset_uuid_by_filename(hg_name, filename):
+    port = get_port(hg_name)
+    uuid = None
+
     try:
         MAX_TILESETS = 100000
-        req = requests.get(
-            "http://localhost:{}/api/v1/tilesets/?limit={}".format(port, MAX_TILESETS),
-            timeout=10,
-        )
+        url = "http://localhost:{}/api/v1/tilesets/?limit={}".format(port, MAX_TILESETS)
+        logger.info(f"Requesting tilesets: {url}")
+        req = requests.get(url, timeout=10)
 
         tilesets = json.loads(req.content)
 
@@ -345,9 +351,9 @@ def import_file(
         )
 
     print("command:", command)
-
     (exit_code, output) = container.exec_run(command)
 
+    print("exit_code:", exit_code, "output", output)
     if exit_code != 0:
         print("ERROR:", output.decode("utf8"), file=sys.stderr)
         return None

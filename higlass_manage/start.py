@@ -173,7 +173,7 @@ def _start(
     Start a HiGlass instance
     """
     hg_container_name = "{}-{}".format(CONTAINER_PREFIX, hg_name)
-
+    print("hg_container_name:", hg_container_name)
     client = docker.from_env()
 
     try:
