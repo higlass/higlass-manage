@@ -122,12 +122,12 @@ higlass instance. This can accomplished using the `shell` command:
 higlass-manage shell
 ```
 
-### Getting the error log
+### Getting the error logs
 
-When errors occur they are usually on the higlass-server end. To output the log use the `log` command:
+When errors occur they are usually on the higlass-server end. To output the logs use the `logs` command:
 
 ```
-higlass-manage log
+higlass-manage logs
 ```
 
 ### Stopping a HiGlass instance
