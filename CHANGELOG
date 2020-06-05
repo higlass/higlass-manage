@@ -1,3 +1,16 @@
+v0.8.0
+
+- Ran black on the entire code base
+- Added update_viewconfs command
+
+v0.7.3
+
+- Use the new higlass-python API
+
+v0.7.2
+
+- Added MANIFEST.in including redis.conf file
+
 v0.6.0
 
 - Added a pull request template

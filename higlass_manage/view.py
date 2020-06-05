@@ -16,24 +16,51 @@ from higlass_manage.common import datatype_to_tracktype
 from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
+
 @click.command()
-@click.argument('filename', nargs=1)
-@click.option('-n', '--hg-name',
-        default='default',
-        help='The name for this higlass instance',
-        type=str)
-@click.option('--filetype', default=None, help="The type of file to ingest (e.g. cooler)")
-@click.option('--datatype', default=None, help="The data type of in the input file (e.g. matrix)")
-@click.option('--tracktype', default=None, help="The track type used to view this file")
-@click.option('--position', default=None, help="The position in the view to place this track")
-@click.option('--public-data/--no-public-data',
-        default=True,
-        help='Include or exclude public data in the list of available tilesets')
-@click.option('--assembly', default=None, help="The assembly that this data is mapped to")
-@click.option('--chromsizes-filename', default=None, help="A set of chromosome sizes to use for bed and bedpe files")
-def view(filename, hg_name, filetype, datatype, tracktype, position, public_data, 
-        assembly, chromsizes_filename):
-    '''
+@click.argument("filename", nargs=1)
+@click.option(
+    "-n",
+    "--hg-name",
+    default="default",
+    help="The name for this higlass instance",
+    type=str,
+)
+@click.option(
+    "--filetype", default=None, help="The type of file to ingest (e.g. cooler)"
+)
+@click.option(
+    "--datatype", default=None, help="The data type of in the input file (e.g. matrix)"
+)
+@click.option("--tracktype", default=None, help="The track type used to view this file")
+@click.option(
+    "--position", default=None, help="The position in the view to place this track"
+)
+@click.option(
+    "--public-data/--no-public-data",
+    default=True,
+    help="Include or exclude public data in the list of available tilesets",
+)
+@click.option(
+    "--assembly", default=None, help="The assembly that this data is mapped to"
+)
+@click.option(
+    "--chromsizes-filename",
+    default=None,
+    help="A set of chromosome sizes to use for bed and bedpe files",
+)
+def view(
+    filename,
+    hg_name,
+    filetype,
+    datatype,
+    tracktype,
+    position,
+    public_data,
+    assembly,
+    chromsizes_filename,
+):
+    """
     View a file in higlass.
 
     The user can specify an instance to view it in. If one is
@@ -46,7 +73,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
         The name of the higlass instance
     filename: string
         The name of the file to view
-    '''
+    """
     try:
         temp_dir = get_temp_dir(hg_name)
         print("temp_dir:", temp_dir)
@@ -63,25 +90,35 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
     uuid = None
 
     # guess filetype and datatype if they're None
-    (filetype, inferred_datatype) = fill_filetype_and_datatype(filename, filetype, datatype)
+    (filetype, inferred_datatype) = fill_filetype_and_datatype(
+        filename, filetype, datatype
+    )
 
     if filetype is None or inferred_datatype is None:
-        print("Couldn't infer filetype or datatype ({}, {}),".format(filetype, inferred_datatype),
-              "please specify them using the command line options", file=sys.stderr)
+        print(
+            "Couldn't infer filetype or datatype ({}, {}),".format(
+                filetype, inferred_datatype
+            ),
+            "please specify them using the command line options",
+            file=sys.stderr,
+        )
         return
 
     try:
-        MAX_TILESETS=100000
-        req = requests.get('http://localhost:{}/api/v1/tilesets/?limit={}'.format(port, MAX_TILESETS), timeout=10)
-        
+        MAX_TILESETS = 100000
+        req = requests.get(
+            "http://localhost:{}/api/v1/tilesets/?limit={}".format(port, MAX_TILESETS),
+            timeout=10,
+        )
+
         tilesets = json.loads(req.content)
 
-        for tileset in tilesets['results']:
+        for tileset in tilesets["results"]:
             import_filename = op.splitext(ntpath.basename(filename))[0]
-            tileset_filename = ntpath.basename(tileset['datafile'])
+            tileset_filename = ntpath.basename(tileset["datafile"])
 
-            subpath_index = tileset['datafile'].find('/tilesets/')
-            subpath = tileset['datafile'][subpath_index + len('/tilesets/'):]
+            subpath_index = tileset["datafile"].find("/tilesets/")
+            subpath = tileset["datafile"][subpath_index + len("/tilesets/") :]
 
             data_dir = get_data_dir(hg_name)
             tileset_path = op.join(data_dir, subpath)
@@ -96,7 +133,7 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
                 checksum2 = md5(filename)
 
                 if checksum1 == checksum2:
-                    uuid = tileset['uuid']
+                    uuid = tileset["uuid"]
                     break
     except requests.exceptions.ConnectionError:
         print("Error getting a list of existing tilesets", file=sys.stderr)
@@ -104,53 +141,67 @@ def view(filename, hg_name, filetype, datatype, tracktype, position, public_data
 
     if uuid is None:
         # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(filename, hg_name, filetype, datatype, assembly=assembly,
-                chromsizes_filename=chromsizes_filename)
+        uuid = _ingest(
+            filename,
+            hg_name,
+            filetype,
+            datatype,
+            assembly=assembly,
+            chromsizes_filename=chromsizes_filename,
+        )
 
     if uuid is None:
         # couldn't ingest the file
         return
 
-    import higlass.client as hgc
+    from higlass.client import Track, View, ViewConf
 
     if datatype is None:
         datatype = inferred_datatype
 
     if tracktype is None and position is None:
         (tracktype, position) = datatype_to_tracktype(datatype)
-        
+
         if tracktype is None:
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
-    conf = hgc.ViewConf()
-    view = conf.add_view()
+    view = View(
+        [
+            Track(
+                track_type=tracktype,
+                position=position,
+                tileset_uuid=uuid,
+                server="http://localhost:{}/api/v1/".format(port),
+                height=200,
+            ),
+        ]
+    )
 
-    track = view.add_track(track_type=tracktype,
-            server='http://localhost:{}/api/v1/'.format(port),
-            tileset_uuid=uuid, position=position, 
-            height=200)
+    viewconf = ViewConf([view])
 
-    conf = json.loads(json.dumps(conf.to_dict()))
+    conf = viewconf.to_dict()
 
-    conf['trackSourceServers'] = []
-    conf['trackSourceServers'] += ['http://localhost:{}/api/v1/'.format(port)]
+    conf["trackSourceServers"] = []
+    conf["trackSourceServers"] += ["http://localhost:{}/api/v1/".format(port)]
 
     if public_data:
-        conf['trackSourceServers'] += ['http://higlass.io/api/v1/']
+        conf["trackSourceServers"] += ["http://higlass.io/api/v1/"]
 
     # uplaod the viewconf
-    res = requests.post('http://localhost:{}/api/v1/viewconfs/'.format(port),
-            json={'viewconf': conf})
+    res = requests.post(
+        "http://localhost:{}/api/v1/viewconfs/".format(port), json={"viewconf": conf}
+    )
 
     if res.status_code != 200:
         print("Error posting viewconf:", res.status, res.content)
         return
 
-    uid = json.loads(res.content)['uid']
+    uid = json.loads(res.content)["uid"]
 
     # make sure this test passes on Travis CI and doesn't try to open
     # a terminal-based browser which doesn't return
-    if not os.environ.get('HAS_JOSH_K_SEAL_OF_APPROVAL'):
-        webbrowser.open('http://localhost:{port}/app/?config={uid}'.format(
-            port=port, uid=uid))
+    if not os.environ.get("HAS_JOSH_K_SEAL_OF_APPROVAL"):
+        webbrowser.open(
+            "http://localhost:{port}/app/?config={uid}".format(port=port, uid=uid)
+        )
