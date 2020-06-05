@@ -14,6 +14,7 @@ setup(
         'clodius>=0.10.3',
         'cooler>=0.8.0',
         'pandas>=0.19',
+        'higlass-python>=0.4.0',
         'docker',
         'requests'
     ],
