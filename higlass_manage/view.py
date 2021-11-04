@@ -1,31 +1,40 @@
 import click
+
+from contextlib import closing
+
 import json
 import ntpath
 import os
 import os.path as op
 import requests
+import socket
 import sys
 import webbrowser
 
+
+from higlass_manage.common import CONTAINER_PREFIX
 from higlass_manage.common import fill_filetype_and_datatype
 from higlass_manage.common import get_port
 from higlass_manage.common import get_data_dir
 from higlass_manage.common import get_temp_dir
 from higlass_manage.common import md5
 from higlass_manage.common import datatype_to_tracktype
+from higlass_manage.common import tileset_uuid_by_exact_filepath
+from higlass_manage.common import tileset_uuid_by_filename
+
 from higlass_manage.start import _start
 from higlass_manage.ingest import _ingest
 
 
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
 @click.command()
 @click.argument("filename", nargs=1)
-@click.option(
-    "-n",
-    "--hg-name",
-    default="default",
-    help="The name for this higlass instance",
-    type=str,
-)
 @click.option(
     "--filetype", default=None, help="The type of file to ingest (e.g. cooler)"
 )
@@ -51,7 +60,6 @@ from higlass_manage.ingest import _ingest
 )
 def view(
     filename,
-    hg_name,
     filetype,
     datatype,
     tracktype,
@@ -74,11 +82,13 @@ def view(
     filename: string
         The name of the file to view
     """
+    port = find_free_port()
+    hg_name = "viewer"
+
     try:
-        temp_dir = get_temp_dir(hg_name)
-        print("temp_dir:", temp_dir)
+        get_temp_dir(hg_name)
     except Exception:
-        _start(hg_name=hg_name)
+        _start(hg_name=hg_name, media_dir="/", port=port)
 
     # check if we have a running instance
     # if not, start one
@@ -104,51 +114,27 @@ def view(
         )
         return
 
-    try:
-        MAX_TILESETS = 100000
-        req = requests.get(
-            "http://localhost:{}/api/v1/tilesets/?limit={}".format(port, MAX_TILESETS),
-            timeout=10,
-        )
+    url = False
+    if filename[:7] == "http://" or filename[:8] == "https://":
+        url = True
 
-        tilesets = json.loads(req.content)
-
-        for tileset in tilesets["results"]:
-            import_filename = op.splitext(ntpath.basename(filename))[0]
-            tileset_filename = ntpath.basename(tileset["datafile"])
-
-            subpath_index = tileset["datafile"].find("/tilesets/")
-            subpath = tileset["datafile"][subpath_index + len("/tilesets/") :]
-
-            data_dir = get_data_dir(hg_name)
-            tileset_path = op.join(data_dir, subpath)
-
-            # print("import_filename", import_filename)
-            # print("tileset_filename", tileset_filename)
-
-            if tileset_filename.find(import_filename) >= 0:
-                # same filenames, make sure they're actually the same file
-                # by comparing checksums
-                checksum1 = md5(tileset_path)
-                checksum2 = md5(filename)
-
-                if checksum1 == checksum2:
-                    uuid = tileset["uuid"]
-                    break
-    except requests.exceptions.ConnectionError:
-        print("Error getting a list of existing tilesets", file=sys.stderr)
+    if url and filetype != "bam":
+        print("Only bam files can be specified as urls", tile=sys.stderr)
         return
 
-    if uuid is None:
-        # we haven't found a matching tileset so we need to ingest this one
-        uuid = _ingest(
-            filename,
-            hg_name,
-            filetype,
-            datatype,
-            assembly=assembly,
-            chromsizes_filename=chromsizes_filename,
-        )
+    # always ingest since we're just linking the file
+    # don't need to keep track of whether it's in the DB
+
+    uuid = _ingest(
+        op.join("/media", op.relpath(op.abspath(filename), "/")),
+        hg_name,
+        filetype,
+        datatype,
+        assembly=assembly,
+        chromsizes_filename=chromsizes_filename,
+        url=url,
+        no_upload=True,
+    )
 
     if uuid is None:
         # couldn't ingest the file
@@ -174,13 +160,23 @@ def view(
                 tileset_uuid=uuid,
                 server="http://localhost:{}/api/v1/".format(port),
                 height=200,
-            ),
+            )
         ]
     )
 
     viewconf = ViewConf([view])
 
     conf = viewconf.to_dict()
+
+    if filetype == "bam" and url:
+        track = conf["views"][0]["tracks"]["top"][0]
+        del track["tilesetUid"]
+        del track["server"]
+        track["data"] = {"type": "bam", "url": filename}
+
+        conf["views"][0]["tracks"]["top"].insert(0, {"type": "top-axis"})
+        # create a smaller viewport so that people can see their reads
+        conf["views"][0]["initialXDomain"] = [0, 40000]
 
     conf["trackSourceServers"] = []
     conf["trackSourceServers"] += ["http://localhost:{}/api/v1/".format(port)]

@@ -63,7 +63,7 @@ from higlass_manage.common import (
     "-m",
     "--media-dir",
     default=None,
-    help="Use a specific media directory for uploaded files.",
+    help="Use a specific media directory for uploaded files",
     type=str,
 )
 @click.option(
@@ -173,7 +173,7 @@ def _start(
     Start a HiGlass instance
     """
     hg_container_name = "{}-{}".format(CONTAINER_PREFIX, hg_name)
-
+    print("hg_container_name:", hg_container_name)
     client = docker.from_env()
 
     try:

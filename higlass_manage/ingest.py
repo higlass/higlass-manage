@@ -1,5 +1,6 @@
 import click
 import clodius.cli.aggregate as cca
+import logging
 import ntpath
 import os.path as op
 import sys
@@ -8,6 +9,10 @@ from higlass_manage.common import fill_filetype_and_datatype
 from higlass_manage.common import import_file
 from higlass_manage.common import get_temp_dir
 from higlass_manage.start import _start
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @click.command()
@@ -93,15 +98,20 @@ def _ingest(
     uid=None,
     no_upload=None,
     project_name=None,
+    url=False,
 ):
-
+    logger.info(f"Ingesting filename {filename}...")
     try:
         get_temp_dir(hg_name)
     except Exception:
         print("HiGlass not running. Starting...")
         _start(hg_name=hg_name)
 
-    if not no_upload and (not op.exists(filename) and not op.islink(filename)):
+    if (
+        not url
+        and not no_upload
+        and (not op.exists(filename) and not op.islink(filename))
+    ):
         print("File not found:", filename, file=sys.stderr)
         return None
 
@@ -129,6 +139,7 @@ def _ingest(
         uid,
         no_upload,
         project_name,
+        url,
     )
 
 

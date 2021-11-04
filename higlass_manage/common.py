@@ -1,7 +1,10 @@
 import docker
 import hashlib
+import json
+import logging
 import os
 import os.path as op
+import requests
 import slugid
 import sys
 
@@ -10,6 +13,8 @@ NETWORK_PREFIX = "higlass-manage-network"
 REDIS_PREFIX = "higlass-manage-redis"
 REDIS_CONF = "/usr/local/etc/redis/redis.conf"
 SQLITEDB = "db.sqlite3"
+
+logger = logging.getLogger()
 
 
 def md5(fname):
@@ -160,6 +165,8 @@ def datatype_to_tracktype(datatype):
         return ("2d-rectangle-domains", "center")
     elif datatype == "bedlike":
         return ("bedlike", "top")
+    elif datatype == "reads":
+        return ("pileup", "top")
 
     return (None, None)
 
@@ -177,6 +184,8 @@ def infer_filetype(filename):
         return "hitile"
     elif ext.lower() == ".beddb":
         return "beddb"
+    elif ext.lower() == ".bam":
+        return "bam"
 
     return None
 
@@ -192,13 +201,87 @@ def infer_datatype(filetype):
         return "vector"
     if filetype == "beddb":
         return "bedlike"
+    if filetype == "bam":
+        return "reads"
+
+
+def tileset_uuid_by_exact_filepath(hg_name, filepath):
+    """
+    Retrieve the uuid of a tileset given a filepath.
+
+    Args:
+        hg_name: The name of the higlass instance
+        filepath: The path of the file.
+    """
+    client = docker.from_env()
+    container_name = hg_name_to_container_name(hg_name)
+    container = client.containers.get(container_name)
+
+    cmd = """python higlass-server/manage.py shell --command="import tilesets.models as tm; objs=tm.Tileset.objects.filter(datafile='{}');print(objs[0].uuid if len(objs) else '')" """.format(
+        filepath
+    )
+    (ret, output) = container.exec_run(cmd)
+    stripped_output = output.decode("utf8").strip("\n")
+
+    # return the uuid parsed out of the output
+    return stripped_output if len(stripped_output) else None
+
+
+def tileset_uuid_by_filename(hg_name, filename):
+    port = get_port(hg_name)
+    uuid = None
+
+    try:
+        MAX_TILESETS = 100000
+        url = "http://localhost:{}/api/v1/tilesets/?limit={}".format(port, MAX_TILESETS)
+        logger.info(f"Requesting tilesets: {url}")
+        req = requests.get(url, timeout=10)
+
+        tilesets = json.loads(req.content)
+
+        for tileset in tilesets["results"]:
+            import_filename = op.splitext(ntpath.basename(filename))[0]
+            tileset_filename = ntpath.basename(tileset["datafile"])
+
+            subpath_index = tileset["datafile"].find("/tilesets/")
+            subpath = tileset["datafile"][subpath_index + len("/tilesets/") :]
+
+            data_dir = get_data_dir(hg_name)
+            tileset_path = op.join(data_dir, subpath)
+
+            # print("import_filename", import_filename)
+            # print("tileset_filename", tileset_filename)
+
+            if tileset_filename.find(import_filename) >= 0:
+                # same filenames, make sure they're actually the same file
+                # by comparing checksums
+                checksum1 = md5(tileset_path)
+                checksum2 = md5(filename)
+
+                if checksum1 == checksum2:
+                    uuid = tileset["uuid"]
+                    break
+    except requests.exceptions.ConnectionError:
+        print("Error getting a list of existing tilesets", file=sys.stderr)
+        return
+    return uuid
 
 
 def import_file(
-    hg_name, filepath, filetype, datatype, assembly, name, uid, no_upload, project_name
+    hg_name,
+    filepath,
+    filetype,
+    datatype,
+    assembly,
+    name,
+    uid,
+    no_upload,
+    project_name,
+    url=False,
 ):
+    print("Importing file:", filepath)
     # get this container's temporary directory
-    if not no_upload:
+    if not no_upload and not url:
         temp_dir = get_temp_dir(hg_name)
         if not op.exists(temp_dir):
             os.makedirs(temp_dir)
@@ -230,33 +313,47 @@ def import_file(
     container_name = hg_name_to_container_name(hg_name)
     container = client.containers.get(container_name)
 
-    if no_upload:
+    if uid is None:
+        uid = slugid.nice()
+
+    if url:
+        command = (
+            'python higlass-server/manage.py shell --command="'
+            + "import tilesets.models as tm; "
+            + "tm.Tileset.objects.create("
+            f"""datafile='{filename}',"""
+            + f"""filetype='{filetype}',"""
+            + f"""datatype='{datatype}',"""
+            + f"""coordSystem='{coordSystem}',"""
+            + f"""coordSystem2='{coordSystem}',"""
+            + f"""owner=None,"""
+            + f"""project={project_name},"""
+            + f"""uuid='{uid}',"""
+            + f"""temporary=False,"""
+            + f"""name='{name}')"""
+            + ';"'
+        )
+    elif no_upload:
         command = (
             "python higlass-server/manage.py ingest_tileset --filename"
             + " {}".format(filename.replace(" ", "\ "))
-            + " --filetype {} --datatype {} {} {} {} --no-upload".format(
-                filetype, datatype, name_text, project_name_text, coordSystem
+            + " --filetype {} --datatype {} {} {} {} --no-upload --uid {}".format(
+                filetype, datatype, name_text, project_name_text, coordSystem, uid
             )
         )
     else:
         command = (
             "python higlass-server/manage.py ingest_tileset --filename"
             + " /tmp/{}".format(filename.replace(" ", "\ "))
-            + " --filetype {} --datatype {} {} {} {}".format(
-                filetype, datatype, name_text, project_name_text, coordSystem
+            + " --filetype {} --datatype {} {} {} {} --uid {}".format(
+                filetype, datatype, name_text, project_name_text, coordSystem, uid
             )
         )
 
-    if uid is not None:
-        command += " --uid {}".format(uid)
-    else:
-        uid = slugid.nice()
-        command += " --uid {}".format(uid)
-
     print("command:", command)
-
     (exit_code, output) = container.exec_run(command)
 
+    print("exit_code:", exit_code, "output", output)
     if exit_code != 0:
         print("ERROR:", output.decode("utf8"), file=sys.stderr)
         return None
