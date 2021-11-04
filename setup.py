@@ -15,6 +15,7 @@ setup(
         "Click",
         "clodius>=0.10.3",
         "cooler>=0.8.1",
+        "higlass-python>=0.1.13",
         "pandas>=0.19",
 	"higlass-python==0.4.4",
         "docker",
