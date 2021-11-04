@@ -11,6 +11,11 @@ die() { set +v; echo "$*" 1>&2 ; sleep 1; exit 1; }
 # directory that is relative to the home directory
 TMPDIR=$(mktemp --directory --tmpdir=${HOME})
 
+start start-container
+    higlass-manage start --media-dir x1y2z3
+    docker inspect higlass-manage-container-default | grep "x1y2z3/_data" && die
+end start-container
+
 start get-data
     ./get_test_data.sh
 end get-data
@@ -44,13 +49,13 @@ start ingest
     higlass-manage ingest --hg-name test-hg \
                                     --no-upload /media/dixon.mcool \
                                     --uid a
-    docker exec higlass-manage-container-default bash -c 'grep -v "showTooltip" higlass-app/static/js/main*.chunk.js | grep function' || die 
+    docker exec higlass-manage-container-default bash -c 'grep -v "showTooltip" higlass-app/static/js/main*.chunk.js | grep function' || die
 end ingest
 
 # check to make sure that the default options were loaded
 start default-options
     higlass-manage start --version ${HIGLASS_DOCKER_VERSION} --default-track-options data/default_options.json
-    docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die 
+    docker exec higlass-manage-container-default bash -c 'grep "showTooltip" higlass-app/static/js/main*.chunk.js' || die
 end default-options
 
 start wait

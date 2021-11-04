@@ -327,7 +327,7 @@ def _start(
     }
 
     if media_dir:
-        hg_volumes[media_dir] = {"bind": "/media", "mode": "rw"}
+        hg_volumes[op.abspath(media_dir)] = {"bind": "/media", "mode": "rw"}
         hg_environment["HIGLASS_MEDIA_ROOT"] = "/media"
 
     if not use_redis:

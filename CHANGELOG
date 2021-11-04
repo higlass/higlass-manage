@@ -1,5 +1,6 @@
 v0.8.0
 
+- Better documentation for the --media-dir and --no-upload parameters
 - Ran black on the entire code base
 - Added update_viewconfs command
 

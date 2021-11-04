@@ -8,8 +8,8 @@ This utility script helps manage local HiGlass instances
 
 To use this utility, you will require:
 
-* [Docker](https://www.docker.com/community-edition)
-* Python 3
+-   [Docker](https://www.docker.com/community-edition)
+-   Python 3
 
 ## Installation
 
@@ -48,8 +48,8 @@ higlass-manage view hic-resolutions.cool
 
 ### Starting a HiGlass instance
 
-Start a local higlass instance using the default data and temporary directories: `~/hg-data` and `/tmp/higlass-docker`. 
-All of the data ingested into the instance will be placed into the data directory. Alternate data and temp directory can be specified using ``--data-dir`` and ``--temp-dir`` parameters.
+Start a local higlass instance using the default data and temporary directories: `~/hg-data` and `/tmp/higlass-docker`.
+All of the data ingested into the instance will be placed into the data directory. Alternate data and temp directory can be specified using `--data-dir` and `--temp-dir` parameters.
 
 ```
 higlass-manage start
@@ -61,7 +61,7 @@ If you want to make your instance accessible to the outside world, you need to s
 higlass-manage start --site-url higlass.io
 ```
 
-These commands will start an instance running on the default port of 8989. An alternate port can be specified using the ``--port`` parameter. The number of worker processes for the uWSGI application server can be specified with the ``--workers`` parameter.
+These commands will start an instance running on the default port of 8989. An alternate port can be specified using the `--port` parameter. The number of worker processes for the uWSGI application server can be specified with the `--workers` parameter.
 
 #### Using the Redis caching service
 
@@ -89,8 +89,8 @@ $ ./higlass_manage.py start --default-track-options default_options.json
 
 ### Ingesting data
 
-Use the `ingest` command to add new data. Generally data requires a ``filetype`` and a ``datatype``.
-This can sometimes (i.e. in the case of `cooler` and `bigwig` files) be inferred from the file itself.
+Use the `ingest` command to add new data. Generally data requires a `filetype` and a `datatype`.
+This can sometimes (i.e. in the case of `cooler` and `bigwig` files) be inferred from the filename:
 
 ```
 higlass-manage ingest my_data.mcool
@@ -102,8 +102,21 @@ In other, more ambiguous cases, it needs to be explicitly specified:
 higlass-manage ingest my_file.bed --filetype bedfile --datatype bedlike --assembly hg19
 ```
 
-Note that bedfiles don't store chromosome sizes so they need to be passed in using 
+Note that bedfiles don't store chromosome sizes so they need to be passed in using
 either the `--assembly` or `--chromsizes-filename` parameters.
+
+#### Custom media directory
+
+By default, `higlass-manage` copies ingested data into a separate directory so
+that it can be served by `higlass-server`. If you would like to retain your
+data in its original location, use the `--media-dir` option to specify a
+separate media directory and ingest files with `--no-upload` and a filepath
+relative to the media directory. Example for a file in `data/my_bigwig.bw`:
+
+```
+higlass-manage start --no-public-data --media-dir $(pwd)/data
+higlass-manage ingest --no-upload my_bigwig.bw
+```
 
 ### Listing available datasets
 
@@ -115,7 +128,7 @@ LAXFhHhASa2zDgJRRS67cw | cooler | matrix | H3K27me3_HiChIP_1.multi.cool
 
 ### Starting a shell
 
-For debugging purposes it can be useful to run a shell within the Docker container hosting the 
+For debugging purposes it can be useful to run a shell within the Docker container hosting the
 higlass instance. This can accomplished using the `shell` command:
 
 ```
@@ -167,11 +180,11 @@ higlass-manage update-viewconfs --old-site-url http://old.host.org --data-dir /o
 
 The following is a list of handy commands when developing HiGlass:
 
-- **Start locally built docker image**:
-The locally built image must be named `image-default`. Usually built using [higlass-docker](https://github.com/higlass/higlass-docker/). 
-   ```
-   higlass-manage start --version local
-   ```
+-   **Start locally built docker image**:
+    The locally built image must be named `image-default`. Usually built using [higlass-docker](https://github.com/higlass/higlass-docker/).
+    ```
+    higlass-manage start --version local
+    ```
 
 ---
 
