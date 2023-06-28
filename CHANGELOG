@@ -1,3 +1,7 @@
+v0.8.2
+
+- Use new higlass-python v1.0 API
+
 v0.8.0
 
 - Ran black on the entire code base
