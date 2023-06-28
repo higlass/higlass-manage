@@ -170,8 +170,8 @@ def view(
         uid=uuid,
         server="http://localhost:{}/api/v1/".format(port),
     )
-    track = tileset.track(track_type, position=position, height=200)
-    view = track.view(track)
+    track = tileset.track(tracktype, position=position, height=200)
+    view = hg.view(track)
     conf = view.viewconf().dict()
 
     conf["trackSourceServers"] = ["http://localhost:{}/api/v1/".format(port)]
