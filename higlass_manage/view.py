@@ -154,7 +154,7 @@ def view(
         # couldn't ingest the file
         return
 
-    from higlass.client import Track, View, ViewConf
+    import higlass as hg
 
     if datatype is None:
         datatype = inferred_datatype
@@ -166,25 +166,15 @@ def view(
             print("ERROR: Unknown track type for the given datatype:", datatype)
             return
 
-    view = View(
-        [
-            Track(
-                track_type=tracktype,
-                position=position,
-                tileset_uuid=uuid,
-                server="http://localhost:{}/api/v1/".format(port),
-                height=200,
-            ),
-        ]
+    tileset = hg.remote(
+        uid=uuid,
+        server="http://localhost:{}/api/v1/".format(port),
     )
+    track = tileset.track(tracktype, position=position, height=200)
+    view = hg.view(track)
+    conf = view.viewconf().dict()
 
-    viewconf = ViewConf([view])
-
-    conf = viewconf.to_dict()
-
-    conf["trackSourceServers"] = []
-    conf["trackSourceServers"] += ["http://localhost:{}/api/v1/".format(port)]
-
+    conf["trackSourceServers"] = ["http://localhost:{}/api/v1/".format(port)]
     if public_data:
         conf["trackSourceServers"] += ["http://higlass.io/api/v1/"]
 
