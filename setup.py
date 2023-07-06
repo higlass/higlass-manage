@@ -6,7 +6,7 @@ setup(
     author_email="pkerpedjiev@gmail.com",
     url="https://github.com/pkerpedjiev/higlass-manage",
     description="Wrappers for running the HiGlass Docker container",
-    version="0.8.1",
+    version="0.8.2",
     py_modules=["higlass_manage"],
     packages=["higlass_manage"],
     package_data={"": ["redis/*"]},
@@ -14,7 +14,7 @@ setup(
     install_requires=[
         "Click",
         "clodius>=0.10.3",
-        "cooler>=0.8.1",
+        "cooler>=0.8.2",
         "pandas>=0.19",
 	    "higlass-python>=1.0.0",
         "docker",
